@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title or ("Clue " ~ clue_id) }}{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-10 col-xl-8">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="mb-0">{{ title or ("Clue " ~ clue_id) }}</h1>
+        <span class="badge bg-primary fs-6">Variant {{ variant }}</span>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <div class="mb-3">
+            <p class="lead mb-2">{{ body_text }}</p>
+          </div>
+
+          {% if hint_text %}
+            {% if hint_revealed %}
+              <div class="alert alert-warning" role="alert">
+                <strong>Hint:</strong> {{ hint_text }}
+              </div>
+            {% else %}
+              <div class="alert alert-warning small" role="alert">
+                Use the "Use Hint" button to reveal the hint. It will also appear above as a message.
+              </div>
+            {% endif %}
+          {% endif %}
+
+          <div class="d-flex flex-wrap align-items-end gap-2 mt-3">
+            <form method="post" action="{{ url_for('hint', id=clue_id) }}">
+              <button type="submit" class="btn btn-outline-info">Use Hint</button>
+            </form>
+
+            <form method="post" action="{{ url_for('skip', id=clue_id) }}">
+              <button type="submit" class="btn btn-outline-warning">Skip</button>
+            </form>
+
+            {% if answer_type == "text" %}
+              <form method="post" action="{{ url_for('submit', id=clue_id) }}" class="d-flex flex-wrap gap-2">
+                <input type="text" class="form-control" name="answer" placeholder="Enter answer" required>
+                <button type="submit" class="btn btn-success">Submit Answer</button>
+              </form>
+            {% else %}
+              <form method="post" action="{{ url_for('submit', id=clue_id) }}">
+                <button type="submit" class="btn btn-success">I found it / Next</button>
+              </form>
+            {% endif %}
+
+            <a href="{{ url_for('index') }}" class="btn btn-link">Back to Home</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="small text-muted">
+        Variant is chosen deterministically from your team token and the clue number.
+      </div>
+    </div>
+  </div>
+{% endblock %}

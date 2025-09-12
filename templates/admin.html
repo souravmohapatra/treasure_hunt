@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Admin{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-12 col-lg-10 col-xl-8">
+      <div class="d-flex align-items-baseline justify-content-between mb-3">
+        <h1 class="mb-0">Admin dashboard</h1>
+        <span class="text-muted small">Live progress</span>
+      </div>
+
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <p class="mb-4">
+            This is a placeholder admin view. Authentication is currently protected by a simple password.
+          </p>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="p-3 border rounded bg-light h-100">
+                <div class="text-muted small mb-1">Admin password configured</div>
+                <div class="fs-5">
+                  {% if admin_password_set %}
+                    <span class="text-success">Yes</span>
+                  {% else %}
+                    <span class="text-danger">No</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="p-3 border rounded bg-light h-100">
+                <div class="text-muted small mb-1">Active teams</div>
+                <div class="fs-5">{{ active_teams }}</div>
+                <div class="text-muted small mb-3">Live data from the database.</div>
+                <form method="post" action="{{ url_for('admin_reset') }}" onsubmit="return confirm('Reset game? This clears all teams and progress.');">
+                  <button type="submit" class="btn btn-sm btn-danger">Reset game</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header">Teams (live)</div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th scope="col">Team</th>
+                  <th scope="col">Current</th>
+                  <th scope="col">Hints</th>
+                  <th scope="col">Skips</th>
+                  <th scope="col">Started</th>
+                  <th scope="col">Completed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for t in teams %}
+                  <tr>
+                    <td>{{ t.name }}</td>
+                    <td>{{ t.current }}</td>
+                    <td>{{ t.hints }}</td>
+                    <td>{{ t.skips }}</td>
+                    <td>{{ t.started_at }}</td>
+                    <td>{{ t.completed_at or "-" }}</td>
+                  </tr>
+                {% else %}
+                  <tr>
+                    <td colspan="6" class="text-muted">No teams yet.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('leaderboard') }}" class="btn btn-primary">View Leaderboard</a>
+        <a href="{{ url_for('setup') }}" class="btn btn-outline-secondary">Setup</a>
+        <a href="{{ url_for('index') }}" class="btn btn-link">Back to Home</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,35 @@
+/* Treasure Hunt - Placeholder stylesheet
+   Purpose: light spacing utilities and muted helper text class
+   This project primarily uses Bootstrap; keep custom CSS minimal.
+*/
+
+/* Base tweaks */
+html, body {
+  scroll-behavior: smooth;
+}
+
+/* Spacing utilities (minimal) */
+.section-spacer {
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.block-spacer {
+  height: 1rem;
+}
+
+/* Muted helper text (lighter than default body, similar to Bootstrap's text-muted) */
+.helper-text {
+  color: rgba(0, 0, 0, 0.55);
+  font-size: 0.875rem;
+}
+
+/* Subtle card polish (optional, complements Bootstrap) */
+.card.shadow-sm {
+  border-radius: 0.5rem;
+}
+
+/* Footer subtlety */
+footer .small {
+  opacity: 0.9;
+}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-10 col-lg-8">
+      <div class="mb-4">
+        <h1 class="mb-2">Welcome to the Treasure Hunt</h1>
+        <p class="lead mb-1">Enter your team name to begin the game.</p>
+        <p class="text-muted small">We’ll create your team in the database and use a secure session cookie for this browser.</p>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <form method="post" action="{{ url_for('start') }}" class="needs-validation" novalidate>
+            <div class="mb-3">
+              <label for="team_name" class="form-label">Team name</label>
+              <input
+                type="text"
+                class="form-control"
+                id="team_name"
+                name="team_name"
+                placeholder="e.g., The Seekers"
+                value="{{ current_team or '' }}"
+                required
+                autofocus
+              >
+              <div class="form-text text-muted">Pick something fun. You can reuse it later in the same browser.</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <button type="submit" class="btn btn-primary">Start</button>
+              <a href="{{ url_for('leaderboard') }}" class="btn btn-outline-secondary">View Leaderboard</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <p class="text-muted small mb-1">
+          The game currently runs from Clue {{ GAME_SETTINGS.FIRST_CLUE_ID }} to {{ GAME_SETTINGS.FINAL_CLUE_ID }}.
+          Hints are available with a placeholder delay of {{ GAME_SETTINGS.HINT_DELAY_SECONDS }} seconds.
+        </p>
+        <p class="text-muted small mb-0">
+          Scoring and persistence are enabled. Your progress and results are saved.
+        </p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

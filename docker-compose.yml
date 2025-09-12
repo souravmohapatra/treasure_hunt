@@ -1,0 +1,17 @@
+services:
+  hunt:
+    build: .
+    container_name: treasure-hunt
+    ports:
+      - "18080:8080"
+    environment:
+      FLASK_ENV: "production"
+      SECRET_KEY: "${SECRET_KEY:-change-me}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-admin}"
+      # Optional game settings with sensible defaults:
+      FIRST_CLUE_ID: "${FIRST_CLUE_ID:-1}"
+      FINAL_CLUE_ID: "${FINAL_CLUE_ID:-6}"
+      HINT_DELAY_SECONDS: "${HINT_DELAY_SECONDS:-20}"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
