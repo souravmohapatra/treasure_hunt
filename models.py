@@ -101,6 +101,15 @@ class Progress(db.Model):
         return f"<Progress team_id={self.team_id} clue_id={self.clue_id} variant={self.variant}>"
 
 
+class Config(db.Model):
+    __tablename__ = "config"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+
+    def __repr__(self) -> str:  # pragma: no cover - debug utility
+        return f"<Config {self.key!r}={self.value!r}>"
+
 # Initialization and seeding helpers
 def _sqlite_db_path_from_uri(uri: str) -> Optional[str]:
     """
@@ -174,6 +183,7 @@ __all__ = [
     "Team",
     "Clue",
     "Progress",
+    "Config",
     "init_app_db",
     "seed_default_clues",
 ]

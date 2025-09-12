@@ -134,3 +134,58 @@ Health check
 curl http://localhost:18080/healthz
 # should return: ok
 ```
+
+## Setup UI
+
+Admin-only route: /setup
+
+- Protected by the same Basic Auth as /admin (use your ADMIN_PASSWORD). Your browser will prompt for credentials.
+
+What you can do
+
+- Manage clues:
+  - List all clues in order (ID, Title, Order, Final).
+  - Add, Edit, Delete clues.
+  - Reorder by editing the “Order index” field.
+  - Preview Variant A or B via buttons (opens /clue/<id>?variant=A or B in a new tab; does not affect DB).
+- Global settings:
+  - Hint delay (seconds), Points per solve, Penalty per hint, Penalty per skip.
+  - Time penalty: window size in seconds and points lost per window.
+  - Values are stored in the Config table; when missing, defaults are used.
+- Import/Export configuration:
+  - Export downloads a JSON document with all clues and config settings.
+  - Import uploads a JSON file and overwrites existing clues and config.
+
+JSON format
+
+```
+{
+  "clues": [
+    {
+      "id": 1,
+      "title": "Clue 1",
+      "body_variant_a": "This is Clue 1 (A)",
+      "body_variant_b": "This is Clue 1 (B)",
+      "answer_type": "tap | text | mcq",
+      "answer_payload": "",            // text: comma-separated; mcq: JSON array; tap: empty
+      "hint_text": "Hint for Clue 1",
+      "order_index": 1,
+      "is_final": false
+    }
+  ],
+  "config": {
+    "HINT_DELAY_SECONDS": 20,
+    "POINTS_SOLVE": 10,
+    "PENALTY_HINT": 3,
+    "PENALTY_SKIP": 8,
+    "TIME_PENALTY_WINDOW_SECONDS": 120,
+    "TIME_PENALTY_POINTS": 1
+  }
+}
+```
+
+Notes
+
+- CSRF protection is enabled for setup forms (Flask-WTF).
+- Scoring logic is unchanged; settings simply control penalties and delay values.
+- Preview links do not record progress or modify the database.

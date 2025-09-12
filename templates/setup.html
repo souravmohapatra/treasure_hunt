@@ -4,50 +4,219 @@
 
 {% block content %}
   <div class="row justify-content-center">
-    <div class="col-12 col-lg-10 col-xl-8">
-      <div class="d-flex align-items-baseline justify-content-between mb-3">
-        <h1 class="mb-0">Setup</h1>
-        <span class="text-muted small">Read-only • Editable form arrives in Step 4</span>
-      </div>
+    <div class="col-12 col-xl-10">
 
-      <div class="card shadow-sm mb-4">
-        <div class="card-body">
-          <p class="mb-3">
-            This is a read-only placeholder for the game setup screen. In Step 4, this page will include an editable form
-            to configure game details such as clues, timings, and rules.
-          </p>
-          <ul class="mb-0">
-            <li>Manage clues and variants</li>
-            <li>Set hint delays and other timing rules</li>
-            <li>Control game visibility and access</li>
-            <li>Preview the experience for test teams</li>
-          </ul>
+      {% if form %}
+        <div class="d-flex align-items-baseline justify-content-between mb-3">
+          <h1 class="mb-0">{{ clue and "Edit Clue" or "Add Clue" }}</h1>
+          <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('setup') }}">Back to Setup</a>
         </div>
-      </div>
 
-      <div class="card mb-4">
-        <div class="card-header">Current settings (from config)</div>
-        <div class="card-body">
-          <dl class="row mb-0">
-            <dt class="col-sm-4">First Clue ID</dt>
-            <dd class="col-sm-8">{{ GAME_SETTINGS.FIRST_CLUE_ID }}</dd>
+        <div class="card shadow-sm mb-4">
+          <div class="card-body">
+            <form method="post" action="" novalidate>
+              {{ form.hidden_tag() }}
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label" for="{{ form.title.id }}">Title</label>
+                  {{ form.title(class="form-control") }}
+                  {% for e in form.title.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
 
-            <dt class="col-sm-4">Final Clue ID</dt>
-            <dd class="col-sm-8">{{ GAME_SETTINGS.FINAL_CLUE_ID }}</dd>
+                <div class="col-12 col-lg-6">
+                  <label class="form-label" for="{{ form.body_variant_a.id }}">Variant A text</label>
+                  {{ form.body_variant_a(class="form-control", rows="6") }}
+                  {% for e in form.body_variant_a.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
 
-            <dt class="col-sm-4">Hint Delay (seconds)</dt>
-            <dd class="col-sm-8">{{ GAME_SETTINGS.HINT_DELAY_SECONDS }}</dd>
-          </dl>
-          <p class="text-muted small mt-3 mb-0">
-            These values are placeholders for development and can be adjusted via environment variables.
-          </p>
+                <div class="col-12 col-lg-6">
+                  <label class="form-label" for="{{ form.body_variant_b.id }}">Variant B text</label>
+                  {{ form.body_variant_b(class="form-control", rows="6") }}
+                  {% for e in form.body_variant_b.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-12 col-md-4">
+                  <label class="form-label" for="{{ form.answer_type.id }}">Answer type</label>
+                  {{ form.answer_type(class="form-select") }}
+                  {% for e in form.answer_type.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-12 col-md-8">
+                  <label class="form-label" for="{{ form.answer_payload.id }}">Accepted answers</label>
+                  {{ form.answer_payload(class="form-control", rows="4") }}
+                  <div class="form-text">
+                    For Text: comma-separated list. For MCQ: JSON array of strings. For Tap: leave blank.
+                  </div>
+                  {% for e in form.answer_payload.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-12">
+                  <label class="form-label" for="{{ form.hint_text.id }}">Hint text</label>
+                  {{ form.hint_text(class="form-control", rows="3") }}
+                  {% for e in form.hint_text.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-6 col-md-3">
+                  <label class="form-label" for="{{ form.order_index.id }}">Order index</label>
+                  {{ form.order_index(class="form-control", min="1") }}
+                  {% for e in form.order_index.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-6 col-md-3 d-flex align-items-end">
+                  <div class="form-check">
+                    {{ form.is_final(class="form-check-input", id="is_final") }}
+                    <label class="form-check-label" for="is_final">Is final clue?</label>
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  {{ form.submit(class="btn btn-primary") }}
+                  <a href="{{ url_for('setup') }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
 
-      <div class="d-flex flex-wrap gap-2">
-        <a href="{{ url_for('admin') }}" class="btn btn-primary">Admin</a>
-        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Back to Home</a>
-      </div>
+      {% else %}
+        <div class="d-flex align-items-baseline justify-content-between mb-3">
+          <h1 class="mb-0">Setup</h1>
+          <div class="d-flex gap-2">
+            <a href="{{ url_for('setup_add') }}" class="btn btn-primary btn-sm">Add Clue</a>
+            <a href="{{ url_for('setup_export') }}" class="btn btn-outline-secondary btn-sm" download>Export JSON</a>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span>Clues</span>
+            <a href="{{ url_for('setup_add') }}" class="btn btn-primary btn-sm">Add</a>
+          </div>
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-striped align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th scope="col" style="width:5rem;">ID</th>
+                    <th scope="col">Title</th>
+                    <th scope="col" style="width:7rem;">Order</th>
+                    <th scope="col" style="width:6rem;">Final</th>
+                    <th scope="col" style="width:22rem;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for c in clues %}
+                    <tr>
+                      <td>{{ c.id }}</td>
+                      <td>{{ c.title }}</td>
+                      <td>{{ c.order_index }}</td>
+                      <td>{% if c.is_final %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
+                      <td class="d-flex flex-wrap gap-2">
+                        <a target="_blank" href="{{ url_for('clue', id=c.id, variant='A') }}" class="btn btn-sm btn-outline-secondary">Preview A</a>
+                        <a target="_blank" href="{{ url_for('clue', id=c.id, variant='B') }}" class="btn btn-sm btn-outline-secondary">Preview B</a>
+                        <a href="{{ url_for('setup_edit', id=c.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                        <form method="post" action="{{ url_for('setup_delete', id=c.id) }}" onsubmit="return confirm('Delete this clue?');" class="d-inline">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                        </form>
+                      </td>
+                    </tr>
+                  {% else %}
+                    <tr>
+                      <td colspan="5" class="text-muted">No clues yet. Click “Add” to create one.</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            <div class="text-muted small">
+              Reorder by editing the “Order index” field on each clue.
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-header">Settings</div>
+          <div class="card-body">
+            <form method="post" action="{{ url_for('setup') }}">
+              {{ settings_form.hidden_tag() }}
+              <div class="row g-3">
+                <div class="col-12 col-md-4">
+                  <label class="form-label" for="{{ settings_form.hint_delay_seconds.id }}">Hint delay (seconds)</label>
+                  {{ settings_form.hint_delay_seconds(class="form-control", min="0") }}
+                  {% for e in settings_form.hint_delay_seconds.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <label class="form-label" for="{{ settings_form.points_solve.id }}">Points per solve</label>
+                  {{ settings_form.points_solve(class="form-control") }}
+                  {% for e in settings_form.points_solve.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <label class="form-label" for="{{ settings_form.penalty_hint.id }}">Penalty per hint</label>
+                  {{ settings_form.penalty_hint(class="form-control") }}
+                  {% for e in settings_form.penalty_hint.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <label class="form-label" for="{{ settings_form.penalty_skip.id }}">Penalty per skip</label>
+                  {{ settings_form.penalty_skip(class="form-control") }}
+                  {% for e in settings_form.penalty_skip.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <label class="form-label" for="{{ settings_form.time_penalty_window_seconds.id }}">Time penalty window (sec)</label>
+                  {{ settings_form.time_penalty_window_seconds(class="form-control", min="1") }}
+                  <div class="form-text">e.g., 120 = every 2 minutes</div>
+                  {% for e in settings_form.time_penalty_window_seconds.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-6 col-md-4">
+                  <label class="form-label" for="{{ settings_form.time_penalty_points.id }}">Time penalty points (per window)</label>
+                  {{ settings_form.time_penalty_points(class="form-control") }}
+                  {% for e in settings_form.time_penalty_points.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-12">
+                  {{ settings_form.submit(class="btn btn-primary") }}
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-header">Import / Export</div>
+          <div class="card-body">
+            <div class="row g-3 align-items-end">
+              <div class="col-12 col-md-6">
+                <label class="form-label">Export current configuration</label><br>
+                <a href="{{ url_for('setup_export') }}" class="btn btn-outline-secondary">Download JSON</a>
+              </div>
+              <div class="col-12 col-md-6">
+                <form method="post" action="{{ url_for('setup_import') }}" enctype="multipart/form-data">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <div class="mb-2">
+                    <label for="importFile" class="form-label">Import JSON (overwrites clues and settings)</label>
+                    <input class="form-control" type="file" id="importFile" name="file" accept=".json,application/json" required>
+                  </div>
+                  <button type="submit" class="btn btn-danger">Import</button>
+                </form>
+              </div>
+            </div>
+            <p class="text-muted small mt-3 mb-0">
+              JSON includes both “clues” and “config” keys. Import overwrites existing data.
+            </p>
+          </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+          <a href="{{ url_for('admin') }}" class="btn btn-outline-secondary">Admin</a>
+          <a href="{{ url_for('index') }}" class="btn btn-link">Back to Home</a>
+        </div>
+      {% endif %}
+
     </div>
   </div>
 {% endblock %}

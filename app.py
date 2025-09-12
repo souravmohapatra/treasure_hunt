@@ -4,6 +4,7 @@ import base64
 import hashlib
 import os
 import uuid
+import json
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
@@ -18,7 +19,9 @@ from flask import (
     Response,
 )
 
-from models import db, Team, Clue, Progress, init_app_db
+from flask_wtf import CSRFProtect
+from forms import ClueForm, SettingsForm, CONFIG_KEY_HINT_DELAY_SECONDS, CONFIG_KEY_POINTS_SOLVE, CONFIG_KEY_PENALTY_HINT, CONFIG_KEY_PENALTY_SKIP, CONFIG_KEY_TIME_PENALTY_WINDOW_SECONDS, CONFIG_KEY_TIME_PENALTY_POINTS
+from models import db, Team, Clue, Progress, Config, init_app_db
 
 # App setup
 app = Flask(__name__)
@@ -27,6 +30,7 @@ app.config.from_object("config")
 
 # Ensure data/ exists for SQLite volume mapping
 os.makedirs("data", exist_ok=True)
+csrf = CSRFProtect(app)
 
 # Initialize database and seed default clues
 init_app_db(app)
@@ -192,6 +196,24 @@ def start():
 
 @app.get("/clue/<int:id>")
 def clue(id: int):
+    # Preview support: /clue/<id>?variant=A|B renders without affecting DB/session
+    preview_variant = (request.args.get("variant") or "").strip().upper()
+    if preview_variant in ("A", "B"):
+        clue_obj = Clue.query.get(id)
+        if not clue_obj:
+            return redirect(url_for("finish"))
+        body_text = clue_obj.body_variant_a if preview_variant == "A" else clue_obj.body_variant_b
+        return render_template(
+            "clue.html",
+            clue_id=clue_obj.id,
+            variant=preview_variant,
+            title=clue_obj.title,
+            body_text=body_text,
+            hint_text=clue_obj.hint_text,
+            answer_type=clue_obj.answer_type,
+            hint_revealed=False,
+        )
+
     team = get_current_team_record()
     if not team:
         flash("Pick a team name to start.", "warning")
@@ -417,9 +439,204 @@ def admin_reset():
     return redirect(url_for("admin"))
 
 
-@app.get("/setup")
+@app.route("/setup", methods=["GET", "POST"])
 def setup():
-    return render_template("setup.html")
+    # Admin protection (Basic Auth)
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    # Prepare settings form with defaults from Config table or fallbacks
+    def _get_cfg_int(key: str, default: int) -> int:
+        cfg = Config.query.get(key)
+        if not cfg:
+            return default
+        try:
+            return int(cfg.value)
+        except Exception:
+            return default
+
+    settings_defaults = {
+        "hint_delay_seconds": _get_cfg_int(CONFIG_KEY_HINT_DELAY_SECONDS, get_game_settings().get("HINT_DELAY_SECONDS", 20)),
+        "points_solve": _get_cfg_int(CONFIG_KEY_POINTS_SOLVE, 10),
+        "penalty_hint": _get_cfg_int(CONFIG_KEY_PENALTY_HINT, 3),
+        "penalty_skip": _get_cfg_int(CONFIG_KEY_PENALTY_SKIP, 8),
+        "time_penalty_window_seconds": _get_cfg_int(CONFIG_KEY_TIME_PENALTY_WINDOW_SECONDS, 120),
+        "time_penalty_points": _get_cfg_int(CONFIG_KEY_TIME_PENALTY_POINTS, 1),
+    }
+    settings_form = SettingsForm(data=settings_defaults)
+
+    if request.method == "POST" and settings_form.validate_on_submit():
+        # Save settings to Config table
+        kv = {
+            CONFIG_KEY_HINT_DELAY_SECONDS: str(settings_form.hint_delay_seconds.data),
+            CONFIG_KEY_POINTS_SOLVE: str(settings_form.points_solve.data),
+            CONFIG_KEY_PENALTY_HINT: str(settings_form.penalty_hint.data),
+            CONFIG_KEY_PENALTY_SKIP: str(settings_form.penalty_skip.data),
+            CONFIG_KEY_TIME_PENALTY_WINDOW_SECONDS: str(settings_form.time_penalty_window_seconds.data),
+            CONFIG_KEY_TIME_PENALTY_POINTS: str(settings_form.time_penalty_points.data),
+        }
+        for k, v in kv.items():
+            row = Config.query.get(k)
+            if row:
+                row.value = v
+            else:
+                db.session.add(Config(key=k, value=v))
+        db.session.commit()
+        flash("Settings saved.", "success")
+        return redirect(url_for("setup"))
+
+    # List clues ordered
+    clues = Clue.query.order_by(Clue.order_index.asc(), Clue.id.asc()).all()
+    return render_template("setup.html", clues=clues, settings_form=settings_form)
+
+
+@app.route("/setup/add", methods=["GET", "POST"])
+def setup_add():
+    # Admin protection
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    form = ClueForm()
+    if form.validate_on_submit():
+        clue = Clue(
+            title=form.title.data,
+            body_variant_a=form.body_variant_a.data,
+            body_variant_b=form.body_variant_b.data,
+            answer_type=form.answer_type.data,
+            answer_payload=(form.answer_payload.data or "").strip(),
+            hint_text=form.hint_text.data or "",
+            order_index=form.order_index.data,
+            is_final=bool(form.is_final.data),
+        )
+        db.session.add(clue)
+        db.session.commit()
+        flash("Clue added.", "success")
+        return redirect(url_for("setup"))
+
+    return render_template("setup.html", form=form)
+
+
+@app.route("/setup/edit/<int:id>", methods=["GET", "POST"])
+def setup_edit(id: int):
+    # Admin protection
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    clue = Clue.query.get_or_404(id)
+    form = ClueForm(obj=clue)
+    if form.validate_on_submit():
+        clue.title = form.title.data
+        clue.body_variant_a = form.body_variant_a.data
+        clue.body_variant_b = form.body_variant_b.data
+        clue.answer_type = form.answer_type.data
+        clue.answer_payload = (form.answer_payload.data or "").strip()
+        clue.hint_text = form.hint_text.data or ""
+        clue.order_index = form.order_index.data
+        clue.is_final = bool(form.is_final.data)
+        db.session.commit()
+        flash("Clue updated.", "success")
+        return redirect(url_for("setup"))
+
+    return render_template("setup.html", form=form, clue=clue)
+
+
+@app.post("/setup/delete/<int:id>")
+def setup_delete(id: int):
+    # Admin protection
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    clue = Clue.query.get_or_404(id)
+    db.session.delete(clue)
+    db.session.commit()
+    flash("Clue deleted.", "warning")
+    return redirect(url_for("setup"))
+
+
+@app.get("/setup/export")
+def setup_export():
+    # Admin protection
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    clues = [
+        {
+            "id": c.id,
+            "title": c.title,
+            "body_variant_a": c.body_variant_a,
+            "body_variant_b": c.body_variant_b,
+            "answer_type": c.answer_type,
+            "answer_payload": c.answer_payload,
+            "hint_text": c.hint_text,
+            "order_index": c.order_index,
+            "is_final": bool(c.is_final),
+        }
+        for c in Clue.query.order_by(Clue.order_index.asc(), Clue.id.asc()).all()
+    ]
+    cfg = {row.key: row.value for row in Config.query.all()}
+    payload = {"clues": clues, "config": cfg}
+    return Response(json.dumps(payload, ensure_ascii=False, indent=2), mimetype="application/json")
+
+
+@app.post("/setup/import")
+def setup_import():
+    # Admin protection
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    file = request.files.get("file")
+    if not file:
+        flash("No file uploaded.", "danger")
+        return redirect(url_for("setup"))
+
+    try:
+        data = json.loads(file.read().decode("utf-8"))
+    except Exception as e:
+        flash(f"Invalid JSON: {e}", "danger")
+        return redirect(url_for("setup"))
+
+    clues = data.get("clues", [])
+    config_map = data.get("config", {})
+
+    # Overwrite clues
+    Clue.query.delete()
+    db.session.commit()
+    for c in clues:
+        obj = Clue(
+            id=c.get("id"),
+            title=c.get("title", ""),
+            body_variant_a=c.get("body_variant_a", ""),
+            body_variant_b=c.get("body_variant_b", ""),
+            answer_type=c.get("answer_type", "tap"),
+            answer_payload=c.get("answer_payload", ""),
+            hint_text=c.get("hint_text", ""),
+            order_index=int(c.get("order_index", 1)),
+            is_final=bool(c.get("is_final", False)),
+        )
+        db.session.add(obj)
+    db.session.commit()
+
+    # Overwrite config
+    Config.query.delete()
+    db.session.commit()
+    for k, v in config_map.items():
+        db.session.add(Config(key=str(k), value=str(v)))
+    db.session.commit()
+
+    flash("Import successful.", "success")
+    return redirect(url_for("setup"))
 
 
 @app.get("/healthz")
