@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Server error (500){% endblock %}
+
+{% block content %}
+  <div class="container-fluid py-5">
+    <div class="row justify-content-center">
+      <div class="col-12 col-md-10 col-lg-8 text-center">
+        <div class="mb-4">
+          <div class="display-1 fw-bold">500</div>
+          <h1 class="h2 mt-2">Something went wrong on our end.</h1>
+          <p class="lead text-muted mt-2">
+            The server hit a snag while processing your request. You can try again, or head back to a safe page.
+          </p>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-center gap-2 my-3">
+          <button class="btn btn-primary btn-lg" onclick="window.location.reload()" aria-label="Reload this page">
+            Try Again
+          </button>
+          <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg" aria-label="Go to Home">
+            Go to Home
+          </a>
+          <a href="{{ url_for('leaderboard') }}" class="btn btn-outline-secondary btn-lg" aria-label="Go to Leaderboard">
+            View Leaderboard
+          </a>
+        </div>
+
+        <p class="text-muted small mt-4 mb-0">
+          If this keeps happening, an administrator may need to check the server logs.
+        </p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

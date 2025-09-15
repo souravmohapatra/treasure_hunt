@@ -4,32 +4,136 @@
 */
 
 /* Base tweaks */
-html, body {
-  scroll-behavior: smooth;
+html,
+body {
+    scroll-behavior: smooth;
 }
 
 /* Spacing utilities (minimal) */
 .section-spacer {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
 .block-spacer {
-  height: 1rem;
+    height: 1rem;
 }
 
 /* Muted helper text (lighter than default body, similar to Bootstrap's text-muted) */
 .helper-text {
-  color: rgba(0, 0, 0, 0.55);
-  font-size: 0.875rem;
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 0.875rem;
 }
 
 /* Subtle card polish (optional, complements Bootstrap) */
 .card.shadow-sm {
-  border-radius: 0.5rem;
+    border-radius: 0.5rem;
 }
 
 /* Footer subtlety */
 footer .small {
-  opacity: 0.9;
+    opacity: 0.9;
+}
+
+/* ---------------------------------------
+   Dark mode (applied when [data-theme="dark"] on <body>)
+   --------------------------------------- */
+[data-theme="dark"] {
+    color-scheme: dark;
+    background-color: #121212;
+    color: #eaeaea;
+}
+
+[data-theme="dark"] a {
+    color: #9ecbff;
+}
+
+[data-theme="dark"] .navbar.navbar-dark {
+    background-color: #1f1f1f !important;
+}
+
+[data-theme="dark"] .card {
+    background-color: #1c1c1c;
+    color: #eaeaea;
+    border-color: #2a2a2a;
+}
+
+[data-theme="dark"] .table {
+    color: #eaeaea;
+}
+
+[data-theme="dark"] .table thead {
+    background-color: #222;
+    color: #eaeaea;
+}
+
+[data-theme="dark"] .alert-warning {
+    background-color: #3a3000;
+    color: #ffecb5;
+    border-color: #4a3e00;
+}
+
+[data-theme="dark"] .btn-outline-secondary,
+[data-theme="dark"] .btn-outline-info,
+[data-theme="dark"] .btn-outline-warning {
+    color: #eaeaea;
+    border-color: #888;
+}
+
+[data-theme="dark"] .btn-outline-secondary:hover,
+[data-theme="dark"] .btn-outline-info:hover,
+[data-theme="dark"] .btn-outline-warning:hover {
+    background-color: #2a2a2a;
+    color: #fff;
+    border-color: #aaa;
+}
+
+[data-theme="dark"] .progress {
+    background-color: #2a2a2a;
+}
+
+[data-theme="dark"] .progress-bar {
+    background-color: #0d6efd;
+}
+
+/* ---------------------------------------
+   Mobile touch targets and spacing tweaks
+   --------------------------------------- */
+
+/* Slightly taller progress bar for touch */
+.progress {
+    height: 1rem;
+}
+
+/* Ensure large buttons have comfortable padding */
+.btn-lg {
+    padding: 0.75rem 1.25rem;
+}
+
+/* Improve tap targets on small screens */
+@media (max-width: 576px) {
+    .btn {
+        min-height: 44px; /* recommended minimum tap target */
+    }
+    .form-control,
+    .form-select {
+        min-height: 44px;
+    }
+    .form-control-lg,
+    .btn-lg {
+        min-height: 48px;
+    }
+    .container,
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .my-3 {
+        margin-top: 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+    .py-3 {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
 }

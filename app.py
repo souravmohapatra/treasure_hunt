@@ -5,6 +5,9 @@ import hashlib
 import os
 import uuid
 import json
+import io
+import csv
+import qrcode
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 
@@ -420,6 +423,7 @@ def admin():
         "admin_password_set": bool(admin_password_expected),
         "active_teams": Team.query.count(),
         "teams": team_rows,
+        "clues": Clue.query.order_by(Clue.order_index.asc(), Clue.id.asc()).all(),
     }
     return render_template("admin.html", **info)
 
@@ -437,6 +441,97 @@ def admin_reset():
     db.session.commit()
     flash("Game reset. All teams and progress cleared.", "warning")
     return redirect(url_for("admin"))
+
+
+@app.get("/admin/export_csv")
+def admin_export_csv():
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    # Build CSV header
+    clues = Clue.query.order_by(Clue.order_index.asc(), Clue.id.asc()).all()
+    base_headers = [
+        "team_name",
+        "team_token",
+        "started_at",
+        "completed_at",
+        "total_solved",
+        "total_hints",
+        "total_skips",
+        "score",
+    ]
+    per_clue_headers = []
+    for c in clues:
+        per_clue_headers.extend([
+            f"clue_{c.id}_variant",
+            f"clue_{c.id}_hint",
+            f"clue_{c.id}_skipped",
+            f"clue_{c.id}_started_at",
+            f"clue_{c.id}_solved_at",
+        ])
+
+    sio = io.StringIO()
+    writer = csv.writer(sio)
+    writer.writerow(base_headers + per_clue_headers)
+
+    teams = Team.query.order_by(Team.created_at.asc()).all()
+    for team in teams:
+        score, solved_count, hint_count, skip_count, _elapsed = _compute_score(team)
+        row = [
+            team.name,
+            team.token,
+            team.created_at.isoformat() if team.created_at else "",
+            team.completed_at.isoformat() if team.completed_at else "",
+            solved_count,
+            hint_count,
+            skip_count,
+            score,
+        ]
+        # Map progress by clue_id for quick lookup
+        progresses = {
+            p.clue_id: p for p in Progress.query.filter_by(team_id=team.id).all()
+        }
+        for c in clues:
+            p = progresses.get(c.id)
+            row.extend([
+                (p.variant if p else ""),
+                ("1" if (p and p.used_hint) else "0"),
+                ("1" if (p and p.skipped) else "0"),
+                (p.started_at.isoformat() if (p and p.started_at) else ""),
+                (p.solved_at.isoformat() if (p and p.solved_at) else ""),
+            ])
+        writer.writerow(row)
+
+    output = sio.getvalue()
+    headers = {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": 'attachment; filename="results.csv"',
+        "Cache-Control": "no-store",
+    }
+    return Response(output, headers=headers)
+
+
+@app.get("/admin/qr/<int:clue_id>.png")
+def admin_qr(clue_id: int):
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    clue = Clue.query.get_or_404(clue_id)
+    url = url_for("clue", id=clue.id, _external=True)
+    img = qrcode.make(url)
+    bio = io.BytesIO()
+    img.save(bio, format="PNG")
+    bio.seek(0)
+    headers = {
+        "Content-Type": "image/png",
+        "Content-Disposition": f'attachment; filename="clue_{clue.id}.png"',
+        "Cache-Control": "no-store",
+    }
+    return Response(bio.read(), headers=headers)
 
 
 @app.route("/setup", methods=["GET", "POST"])
@@ -642,6 +737,16 @@ def setup_import():
 @app.get("/healthz")
 def healthz():
     return Response("ok", status=200, mimetype="text/plain")
+
+
+@app.errorhandler(404)
+def handle_404(e):
+    return render_template("404.html"), 404
+
+
+@app.errorhandler(500)
+def handle_500(e):
+    return render_template("500.html"), 500
 
 
 # Allow running with `python app.py` (optional; flask run is preferred)

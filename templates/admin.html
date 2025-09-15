@@ -45,7 +45,10 @@
       </div>
 
       <div class="card mb-4">
-        <div class="card-header">Teams (live)</div>
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Teams (live)</span>
+          <a href="{{ url_for('admin_export_csv') }}" class="btn btn-sm btn-outline-primary" download aria-label="Export results as CSV">Export CSV</a>
+        </div>
         <div class="card-body">
           <div class="table-responsive">
             <table class="table table-striped align-middle">
@@ -59,7 +62,7 @@
                   <th scope="col">Completed</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="adminTeamsBody">
                 {% for t in teams %}
                   <tr>
                     <td>{{ t.name }}</td>
@@ -80,6 +83,28 @@
         </div>
       </div>
 
+      <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Clue QR Codes</span>
+          <span class="text-muted small">Downloadable PNGs</span>
+        </div>
+        <div class="card-body">
+          <div class="row g-2">
+            {% for c in clues %}
+              <div class="col-12 col-sm-6 col-lg-4 d-flex align-items-center justify-content-between border rounded p-2">
+                <div class="me-2">
+                  <div class="fw-semibold">Clue {{ c.id }}</div>
+                  <div class="text-muted small">{{ c.title }}</div>
+                </div>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin_qr', clue_id=c.id) }}" aria-label="Download QR for Clue {{ c.id }}">Download QR</a>
+              </div>
+            {% else %}
+              <div class="col-12 text-muted">No clues available.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
       <div class="d-flex flex-wrap gap-2">
         <a href="{{ url_for('leaderboard') }}" class="btn btn-primary">View Leaderboard</a>
         <a href="{{ url_for('setup') }}" class="btn btn-outline-secondary">Setup</a>
@@ -87,4 +112,31 @@
       </div>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-refresh the admin teams table every 10 seconds
+  (function () {
+    function refreshAdminTeams() {
+      const tbody = document.getElementById('adminTeamsBody');
+      if (!tbody) return;
+      fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' } })
+        .then(function (res) { return res.ok ? res.text() : null; })
+        .then(function (html) {
+          if (!html) return;
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const fresh = doc.getElementById('adminTeamsBody');
+          if (fresh) {
+            tbody.innerHTML = fresh.innerHTML;
+          }
+        })
+        .catch(function () { /* ignore */ });
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      setInterval(refreshAdminTeams, 10000);
+    });
+  })();
+</script>
 {% endblock %}

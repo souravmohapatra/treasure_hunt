@@ -27,7 +27,7 @@
               <th scope="col" style="width: 10rem;">Time / Progress</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="leaderboardBody">
             {% for row in rows %}
               <tr class="{% if current_team and row.team == current_team %}table-primary{% endif %}">
                 <th scope="row">{{ row.rank }}</th>
@@ -49,4 +49,37 @@
       </div>
     </div>
   </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-refresh the leaderboard table body every 10 seconds
+  (function () {
+    function refreshLeaderboard() {
+      const tbody = document.getElementById('leaderboardBody');
+      if (!tbody) return;
+      fetch(window.location.href, { headers: { 'X-Requested-With': 'fetch' } })
+        .then(function (res) {
+          if (!res.ok) return null;
+          return res.text();
+        })
+        .then(function (html) {
+          if (!html) return;
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, 'text/html');
+          const fresh = doc.getElementById('leaderboardBody');
+          if (fresh) {
+            tbody.innerHTML = fresh.innerHTML;
+          }
+        })
+        .catch(function () {
+          // ignore transient errors
+        });
+    }
+    // Initial tick after DOM ready, then every 10s
+    document.addEventListener('DOMContentLoaded', function () {
+      setInterval(refreshLeaderboard, 10000);
+    });
+  })();
+</script>
 {% endblock %}

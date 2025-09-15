@@ -189,3 +189,14 @@ Notes
 - CSRF protection is enabled for setup forms (Flask-WTF).
 - Scoring logic is unchanged; settings simply control penalties and delay values.
 - Preview links do not record progress or modify the database.
+
+## Polish & Admin Tools
+
+- Dark/Light mode toggle in the navbar; remembered per device (localStorage).
+- Hint countdown on clue pages; the Hint button enables after HINT_DELAY_SECONDS.
+- Progress bar and a small elapsed timer on clue pages.
+- Confetti celebration on the finish page.
+- Leaderboard and Admin auto-refresh every 10 seconds (lightweight fetch).
+- Admin tools: CSV export of results and downloadable QR code PNGs for each /clue/&lt;id&gt; URL (useful fallback to NFC).
+- If you install new dependencies, rebuild your container:
+  - docker compose up -d --build

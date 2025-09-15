@@ -18,7 +18,7 @@
 
     {% block head %}{% endblock %}
   </head>
-  <body class="d-flex flex-column min-vh-100">
+  <body class="d-flex flex-column min-vh-100" data-theme="light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container">
         <a class="navbar-brand" href="{{ url_for('index') }}">Treasure Hunt</a>
@@ -46,12 +46,13 @@
               <a class="nav-link" href="{{ url_for('admin') }}" title="Protected (Basic Auth)">Admin</a>
             </li>
           </ul>
-          <div class="d-flex">
+          <div class="d-flex align-items-center gap-2">
             {% if current_team %}
               <span class="navbar-text text-light">Team: <strong>{{ current_team }}</strong></span>
             {% else %}
               <span class="navbar-text text-secondary">No team selected</span>
             {% endif %}
+            <button id="themeToggle" type="button" class="btn btn-outline-light btn-sm ms-2" aria-label="Toggle color theme">Theme</button>
           </div>
         </div>
       </div>
@@ -96,6 +97,7 @@
       crossorigin="anonymous"
     ></script>
 
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
     <script>
       (function(){ var el = document.getElementById('year'); if (el) { el.textContent = new Date().getFullYear(); } })();
     </script>
