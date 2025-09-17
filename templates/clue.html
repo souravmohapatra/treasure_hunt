@@ -26,6 +26,14 @@
       <div class="card shadow-sm mb-4">
         <div class="card-body">
           <div class="mb-3">
+            {% if clue and clue.image_filename %}
+              <img src="{{ url_for('serve_upload', filename=clue.image_filename) }}"
+                   alt="{{ clue.image_alt or 'Clue image' }}"
+                   class="img-fluid rounded pastel-border mb-2">
+              {% if clue.image_caption %}
+                <div class="muted small mb-2">{{ clue.image_caption }}</div>
+              {% endif %}
+            {% endif %}
             <p class="lead mb-2">{{ body_text }}</p>
           </div>
 

@@ -200,3 +200,16 @@ Notes
 - Admin tools: CSV export of results and downloadable QR code PNGs for each /clue/&lt;id&gt; URL (useful fallback to NFC).
 - If you install new dependencies, rebuild your container:
   - docker compose up -d --build
+
+## Clue Images
+
+- Supported formats: .png, .jpg, .jpeg, .webp, .gif (max 2 MB).
+- Files are stored under data/uploads/ and are served via /uploads/<filename>.
+- In Docker, uploads persist because ./data is mounted into /app/data.
+- Manage images in the Setup UI when adding or editing a clue:
+  - Optional file input (upload), plus fields for Image alt and Image caption.
+  - If a clue already has an image, a small preview is shown (about 240px wide).
+  - Check “Remove image” to delete the current image and clear metadata.
+  - Uploading a new image replaces the previous one.
+- Large images are downscaled to a max ~1600px on the long edge when possible (Pillow), to keep files lightweight.
+- Security: filenames are sanitized and only image/* content with allowed extensions are accepted.

@@ -1,12 +1,82 @@
-/* Treasure Hunt - Placeholder stylesheet
-   Purpose: light spacing utilities and muted helper text class
-   This project primarily uses Bootstrap; keep custom CSS minimal.
+/* Treasure Hunt - Stylesheet
+   Purpose: light spacing utilities, pastel theme variables, dark mode, table wrapping, and mobile polish.
+   This project primarily uses Bootstrap; keep custom CSS minimal and complementary.
 */
 
-/* Base tweaks */
+/* ---------------------------------------
+   Pastel theme variables (light + dark)
+   --------------------------------------- */
+:root {
+    --bg: #f8fafc; /* soft off-white */
+    --card: #ffffff;
+    --text: #1f2937; /* slate-800 */
+    --muted: #6b7280; /* slate-500 */
+    --primary: #89c2d9; /* pastel blue */
+    --primary-contrast: #0b2530;
+    --accent: #c7f0bd; /* pastel green */
+    --accent-2: #f7c3d0; /* pastel pink */
+    --hint: #fff3cd; /* soft amber */
+    --border: #e5e7eb;
+}
+
+[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0e141b;
+    --card: #111927;
+    --text: #e5e7eb;
+    --muted: #9aa4b2;
+    --primary: #6fb3c9;
+    --primary-contrast: #07161b;
+    --accent: #97d58a;
+    --accent-2: #e9a8b8;
+    --hint: #3a2f17;
+    --border: #223042;
+}
+
+/* Base colors */
 html,
 body {
     scroll-behavior: smooth;
+}
+body {
+    background: var(--bg);
+    color: var(--text);
+}
+
+/* Cards, tables, modals follow card background */
+.card,
+.table,
+.modal-content {
+    background: var(--card);
+}
+
+/* Primary button tint */
+.btn-primary {
+    background-color: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-contrast);
+}
+.btn-primary:hover,
+.btn-primary:focus {
+    filter: brightness(0.95);
+}
+
+/* Utility tokens */
+.helper-text {
+    /* legacy helper */
+    color: rgba(0, 0, 0, 0.55);
+    font-size: 0.875rem;
+}
+.muted {
+    color: var(--muted);
+}
+.pastel-border {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+}
+.badge-hint {
+    background: var(--hint);
+    color: var(--text);
 }
 
 /* Spacing utilities (minimal) */
@@ -14,15 +84,8 @@ body {
     margin-top: 1.5rem;
     margin-bottom: 1.5rem;
 }
-
 .block-spacer {
     height: 1rem;
-}
-
-/* Muted helper text (lighter than default body, similar to Bootstrap's text-muted) */
-.helper-text {
-    color: rgba(0, 0, 0, 0.55);
-    font-size: 0.875rem;
 }
 
 /* Subtle card polish (optional, complements Bootstrap) */
@@ -36,50 +99,43 @@ footer .small {
 }
 
 /* ---------------------------------------
-   Dark mode (applied when [data-theme="dark"] on <body>)
+   Tables: wrapping & responsive behavior
    --------------------------------------- */
-[data-theme="dark"] {
-    color-scheme: dark;
-    background-color: #121212;
-    color: #eaeaea;
+.table-responsive {
+    overflow-x: auto;
+}
+.table td,
+.table th {
+    white-space: normal; /* allow wraps */
+    overflow-wrap: anywhere; /* break long words/URLs */
+    word-break: break-word; /* fallback */
+}
+.cell-constrain {
+    max-width: 28rem; /* constrain very wide cells */
+}
+.table thead th {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
-[data-theme="dark"] a {
-    color: #9ecbff;
-}
-
+/* ---------------------------------------
+   Dark mode additional tints (using variables)
+   --------------------------------------- */
 [data-theme="dark"] .navbar.navbar-dark {
     background-color: #1f1f1f !important;
 }
-
-[data-theme="dark"] .card {
-    background-color: #1c1c1c;
-    color: #eaeaea;
-    border-color: #2a2a2a;
-}
-
-[data-theme="dark"] .table {
-    color: #eaeaea;
-}
-
-[data-theme="dark"] .table thead {
-    background-color: #222;
-    color: #eaeaea;
-}
-
 [data-theme="dark"] .alert-warning {
-    background-color: #3a3000;
-    color: #ffecb5;
-    border-color: #4a3e00;
+    background-color: var(--hint);
+    color: var(--text);
+    border-color: var(--border);
 }
-
 [data-theme="dark"] .btn-outline-secondary,
 [data-theme="dark"] .btn-outline-info,
 [data-theme="dark"] .btn-outline-warning {
-    color: #eaeaea;
+    color: var(--text);
     border-color: #888;
 }
-
 [data-theme="dark"] .btn-outline-secondary:hover,
 [data-theme="dark"] .btn-outline-info:hover,
 [data-theme="dark"] .btn-outline-warning:hover {
@@ -87,11 +143,9 @@ footer .small {
     color: #fff;
     border-color: #aaa;
 }
-
 [data-theme="dark"] .progress {
     background-color: #2a2a2a;
 }
-
 [data-theme="dark"] .progress-bar {
     background-color: #0d6efd;
 }

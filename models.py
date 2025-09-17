@@ -22,7 +22,7 @@ from datetime import datetime
 from typing import Optional
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import UniqueConstraint, Boolean, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import UniqueConstraint, Boolean, Integer, String, Text, DateTime, ForeignKey, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 # SQLAlchemy handle (init with app via `init_app_db(app)`)
@@ -60,6 +60,11 @@ class Clue(db.Model):
     answer_type: Mapped[str] = mapped_column(String(16), nullable=False, default="tap")  # "tap" or "text"
     answer_payload: Mapped[str] = mapped_column(Text, nullable=False, default="")
     hint_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Optional image fields
+    image_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    image_alt: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    image_caption: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     order_index: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     is_final: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
@@ -145,6 +150,19 @@ def init_app_db(app) -> None:
         else:
             # Even if file exists, ensure tables are present (idempotent)
             db.create_all()
+
+        # Lightweight migration: ensure clue image columns exist (SQLite)
+        try:
+            cols = {row[1] for row in db.session.execute(text("PRAGMA table_info('clues')")).fetchall()}
+            if 'image_filename' not in cols:
+                db.session.execute(text("ALTER TABLE clues ADD COLUMN image_filename VARCHAR(255)"))
+            if 'image_alt' not in cols:
+                db.session.execute(text("ALTER TABLE clues ADD COLUMN image_alt VARCHAR(255)"))
+            if 'image_caption' not in cols:
+                db.session.execute(text("ALTER TABLE clues ADD COLUMN image_caption TEXT"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
         # Seed clues if empty
         seed_default_clues()

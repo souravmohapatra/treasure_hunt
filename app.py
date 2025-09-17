@@ -20,8 +20,11 @@ from flask import (
     flash,
     session,
     Response,
+    send_from_directory,
 )
 
+from werkzeug.utils import secure_filename
+from PIL import Image
 from flask_wtf import CSRFProtect
 from forms import ClueForm, SettingsForm, CONFIG_KEY_HINT_DELAY_SECONDS, CONFIG_KEY_POINTS_SOLVE, CONFIG_KEY_PENALTY_HINT, CONFIG_KEY_PENALTY_SKIP, CONFIG_KEY_TIME_PENALTY_WINDOW_SECONDS, CONFIG_KEY_TIME_PENALTY_POINTS
 from models import db, Team, Clue, Progress, Config, init_app_db
@@ -30,9 +33,12 @@ from models import db, Team, Clue, Progress, Config, init_app_db
 app = Flask(__name__)
 # Load configuration from config.py (SECRET_KEY, ADMIN_PASSWORD, GAME_SETTINGS, SQLAlchemy)
 app.config.from_object("config")
+# Limit uploads to 2 MB
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
 
-# Ensure data/ exists for SQLite volume mapping
+# Ensure data/ exists for SQLite volume mapping and uploads dir
 os.makedirs("data", exist_ok=True)
+os.makedirs(os.path.join("data", "uploads"), exist_ok=True)
 csrf = CSRFProtect(app)
 
 # Initialize database and seed default clues
@@ -215,6 +221,7 @@ def clue(id: int):
             hint_text=clue_obj.hint_text,
             answer_type=clue_obj.answer_type,
             hint_revealed=False,
+            clue=clue_obj,
         )
 
     team = get_current_team_record()
@@ -245,6 +252,7 @@ def clue(id: int):
         hint_text=clue_obj.hint_text,
         answer_type=clue_obj.answer_type,
         hint_revealed=prog.used_hint,
+        clue=clue_obj,
     )
 
 
@@ -609,6 +617,43 @@ def setup_add():
         )
         db.session.add(clue)
         db.session.commit()
+
+        # Handle optional image upload
+        file = form.image.data
+        if file and getattr(file, "filename", ""):
+            allowed_ext = {"png", "jpg", "jpeg", "webp", "gif"}
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+            if ext in allowed_ext and (file.mimetype or "").startswith("image/"):
+                uploads_dir = os.path.join("data", "uploads")
+                unique_name = f"{clue.id}-{uuid.uuid4().hex}_{filename}"
+                dest_path = os.path.join(uploads_dir, unique_name)
+                try:
+                    data = file.read()
+                    from io import BytesIO
+                    bio = BytesIO(data)
+                    img = Image.open(bio)
+                    img.thumbnail((1600, 1600))
+                    img.save(dest_path)
+                    clue.image_filename = unique_name
+                    clue.image_alt = (form.image_alt.data or "").strip() or None
+                    clue.image_caption = (form.image_caption.data or "").strip() or None
+                    db.session.commit()
+                except Exception:
+                    # Fallback: try saving raw if Pillow fails
+                    try:
+                        with open(dest_path, "wb") as f:
+                            f.write(data)
+                        clue.image_filename = unique_name
+                        clue.image_alt = (form.image_alt.data or "").strip() or None
+                        clue.image_caption = (form.image_caption.data or "").strip() or None
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
+                        flash("Failed to save image.", "warning")
+            else:
+                flash("Invalid image type. Allowed: png, jpg, jpeg, webp, gif.", "warning")
+
         flash("Clue added.", "success")
         return redirect(url_for("setup"))
 
@@ -634,6 +679,56 @@ def setup_edit(id: int):
         clue.hint_text = form.hint_text.data or ""
         clue.order_index = form.order_index.data
         clue.is_final = bool(form.is_final.data)
+
+        # Handle image removal
+        uploads_dir = os.path.join("data", "uploads")
+        if getattr(form, "remove_image", None) and form.remove_image.data:
+            if clue.image_filename:
+                try:
+                    os.remove(os.path.join(uploads_dir, clue.image_filename))
+                except Exception:
+                    pass
+            clue.image_filename = None
+            clue.image_alt = None
+            clue.image_caption = None
+
+        # Handle image upload/replace
+        file = form.image.data
+        if file and getattr(file, "filename", ""):
+            allowed_ext = {"png", "jpg", "jpeg", "webp", "gif"}
+            filename = secure_filename(file.filename)
+            ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+            if ext in allowed_ext and (file.mimetype or "").startswith("image/"):
+                # Remove old file if present
+                if clue.image_filename:
+                    try:
+                        os.remove(os.path.join(uploads_dir, clue.image_filename))
+                    except Exception:
+                        pass
+                unique_name = f"{clue.id}-{uuid.uuid4().hex}_{filename}"
+                dest_path = os.path.join(uploads_dir, unique_name)
+                try:
+                    data = file.read()
+                    from io import BytesIO
+                    bio = BytesIO(data)
+                    img = Image.open(bio)
+                    img.thumbnail((1600, 1600))
+                    img.save(dest_path)
+                    clue.image_filename = unique_name
+                except Exception:
+                    try:
+                        with open(dest_path, "wb") as f:
+                            f.write(data)
+                        clue.image_filename = unique_name
+                    except Exception:
+                        flash("Failed to save image.", "warning")
+            else:
+                flash("Invalid image type. Allowed: png, jpg, jpeg, webp, gif.", "warning")
+
+        # Always update alt/caption from form
+        clue.image_alt = (form.image_alt.data or "").strip() or clue.image_alt
+        clue.image_caption = (form.image_caption.data or "").strip() or clue.image_caption
+
         db.session.commit()
         flash("Clue updated.", "success")
         return redirect(url_for("setup"))
@@ -737,6 +832,12 @@ def setup_import():
 @app.get("/healthz")
 def healthz():
     return Response("ok", status=200, mimetype="text/plain")
+
+
+@app.get("/uploads/<path:filename>")
+def serve_upload(filename: str):
+    uploads_dir = os.path.join("data", "uploads")
+    return send_from_directory(uploads_dir, filename)
 
 
 @app.errorhandler(404)

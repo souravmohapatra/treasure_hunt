@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import (
     StringField,
     TextAreaField,
@@ -72,6 +73,23 @@ class ClueForm(FlaskForm):
         validators=[DataRequired(), NumberRange(min=1, message="Order index must be >= 1")],
         render_kw={"min": 1},
     )
+    # Optional image fields
+    image = FileField(
+        "Image",
+        validators=[Optional(), FileAllowed(["png", "jpg", "jpeg", "webp", "gif"], "Images only!")],
+        render_kw={"accept": "image/png,image/jpeg,image/webp,image/gif"}
+    )
+    image_alt = StringField(
+        "Image alt",
+        validators=[Optional(), Length(max=255)],
+        render_kw={"placeholder": "Alternative text for accessibility"}
+    )
+    image_caption = StringField(
+        "Image caption",
+        validators=[Optional(), Length(max=255)],
+        render_kw={"placeholder": "Short caption shown under the image"}
+    )
+    remove_image = BooleanField("Remove image")
     is_final = BooleanField("Is final clue?")
     submit = SubmitField("Save")
 

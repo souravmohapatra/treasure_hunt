@@ -14,7 +14,7 @@
 
         <div class="card shadow-sm mb-4">
           <div class="card-body">
-            <form method="post" action="" novalidate>
+            <form method="post" action="" enctype="multipart/form-data" novalidate>
               {{ form.hidden_tag() }}
               <div class="row g-3">
                 <div class="col-12">
@@ -55,6 +55,43 @@
                   {{ form.hint_text(class="form-control", rows="3") }}
                   {% for e in form.hint_text.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
                 </div>
+
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="{{ form.image.id }}">Image</label>
+                  {{ form.image(class="form-control") }}
+                  <div class="form-text">Optional. Max 2 MB. Allowed: png, jpg, jpeg, webp, gif.</div>
+                  {% for e in form.image.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+
+                <div class="col-12 col-md-6">
+                  <div class="row g-3">
+                    <div class="col-12">
+                      <label class="form-label" for="{{ form.image_alt.id }}">Image alt</label>
+                      {{ form.image_alt(class="form-control") }}
+                      {% for e in form.image_alt.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label" for="{{ form.image_caption.id }}">Image caption</label>
+                      {{ form.image_caption(class="form-control") }}
+                      {% for e in form.image_caption.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                    </div>
+                  </div>
+                </div>
+
+                {% if clue and clue.image_filename %}
+                  <div class="col-12 col-md-6">
+                    <div class="pastel-border p-2 my-2">
+                      <div class="muted small mb-2">Current image preview</div>
+                      <img src="{{ url_for('serve_upload', filename=clue.image_filename) }}"
+                           alt="{{ clue.image_alt or 'Clue image' }}"
+                           class="img-fluid rounded mb-2" style="max-width: 240px;">
+                      <div class="form-check my-2">
+                        {{ form.remove_image(class="form-check-input", id="remove_image") }}
+                        <label class="form-check-label" for="remove_image">Remove image</label>
+                      </div>
+                    </div>
+                  </div>
+                {% endif %}
 
                 <div class="col-6 col-md-3">
                   <label class="form-label" for="{{ form.order_index.id }}">Order index</label>
@@ -99,6 +136,8 @@
                   <tr>
                     <th scope="col" style="width:5rem;">ID</th>
                     <th scope="col">Title</th>
+                    <th scope="col" style="width:6rem;">Type</th>
+                    <th scope="col" style="width:6rem;">Media</th>
                     <th scope="col" style="width:7rem;">Order</th>
                     <th scope="col" style="width:6rem;">Final</th>
                     <th scope="col" style="width:22rem;">Actions</th>
@@ -108,14 +147,22 @@
                   {% for c in clues %}
                     <tr>
                       <td>{{ c.id }}</td>
-                      <td>{{ c.title }}</td>
+                      <td class="cell-constrain">{{ c.title }}</td>
+                      <td><span class="badge bg-info text-dark">{{ c.answer_type|upper }}</span></td>
+                      <td>
+                        {% if c.image_filename %}
+                          <span class="badge bg-secondary">Image</span>
+                        {% else %}
+                          <span class="text-muted small">—</span>
+                        {% endif %}
+                      </td>
                       <td>{{ c.order_index }}</td>
                       <td>{% if c.is_final %}<span class="badge bg-success">Yes</span>{% else %}<span class="badge bg-secondary">No</span>{% endif %}</td>
-                      <td class="d-flex flex-wrap gap-2">
+                      <td class="d-flex flex-wrap gap-2 my-1">
                         <a target="_blank" href="{{ url_for('clue', id=c.id, variant='A') }}" class="btn btn-sm btn-outline-secondary">Preview A</a>
                         <a target="_blank" href="{{ url_for('clue', id=c.id, variant='B') }}" class="btn btn-sm btn-outline-secondary">Preview B</a>
                         <a href="{{ url_for('setup_edit', id=c.id) }}" class="btn btn-sm btn-primary">Edit</a>
-                        <form method="post" action="{{ url_for('setup_delete', id=c.id) }}" onsubmit="return confirm('Delete this clue?');" class="d-inline">
+                        <form method="post" action="{{ url_for('setup_delete', id=c.id) }}" onsubmit="return confirm('Delete this clue?');" class="d-inline my-1">
                           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                         </form>
@@ -123,7 +170,7 @@
                     </tr>
                   {% else %}
                     <tr>
-                      <td colspan="5" class="text-muted">No clues yet. Click “Add” to create one.</td>
+                      <td colspan="7" class="text-muted">No clues yet. Click “Add” to create one.</td>
                     </tr>
                   {% endfor %}
                 </tbody>

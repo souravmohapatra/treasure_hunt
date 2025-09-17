@@ -50,8 +50,8 @@
           <a href="{{ url_for('admin_export_csv') }}" class="btn btn-sm btn-outline-primary" download aria-label="Export results as CSV">Export CSV</a>
         </div>
         <div class="card-body">
-          <div class="table-responsive">
-            <table class="table table-striped align-middle">
+          <div class="table-responsive overflow-auto">
+            <table class="table table-striped align-middle" style="table-layout: fixed; width: 100%;">
               <thead class="table-light">
                 <tr>
                   <th scope="col">Team</th>
