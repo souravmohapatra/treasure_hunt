@@ -44,12 +44,15 @@
                   {% endif %}
                 </div>
                 <form method="post" action="{{ url_for('admin_start_game') }}" onsubmit="return confirm('Start the game for all teams now?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="btn btn-sm btn-success{% if game_started %} disabled{% endif %} mt-2" {% if game_started %}disabled{% endif %}>Start Game</button>
                 </form>
                 <form method="post" action="{{ url_for('admin_reset') }}" onsubmit="return confirm('Reset game? This clears all teams and progress.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="btn btn-sm btn-danger">Reset game</button>
                 </form>
                 <form method="post" action="{{ url_for('admin_rotate_slugs') }}" onsubmit="return confirm('Rotate all NFC clue URLs? This changes all slugs.');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <button type="submit" class="btn btn-sm btn-warning mt-2">Rotate NFC URLs</button>
                 </form>
               </div>

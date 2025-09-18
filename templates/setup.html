@@ -172,6 +172,7 @@
                         <a href="{{ url_for('setup_edit', id=c.id) }}" class="btn btn-sm btn-primary">Edit</a>
                         <form method="post" action="{{ url_for('setup_delete', id=c.id) }}" onsubmit="return confirm('Delete this clue?');" class="d-inline my-1">
                           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                           <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                         </form>
                       </td>
@@ -251,6 +252,7 @@
               </div>
               <div class="col-12 col-md-6">
                 <form method="post" action="{{ url_for('setup_import') }}" enctype="multipart/form-data">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <div class="mb-2">
                     <label for="importFile" class="form-label">Import JSON (overwrites clues and settings)</label>

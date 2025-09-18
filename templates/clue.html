@@ -51,6 +51,7 @@
 
           <div class="d-flex flex-wrap align-items-end gap-2 mt-3">
             <form method="post" action="{{ url_for('hint', id=clue_id|int) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button id="hintBtn" type="submit" class="btn btn-outline-info btn-lg mb-3" aria-label="Use hint"
                       data-hint-delay="{{ GAME_SETTINGS.HINT_DELAY_SECONDS }}" {% if not hint_revealed %}disabled{% endif %}>
                 <span id="hintBtnLabel">{% if hint_revealed %}Use Hint{% else %}Hint (available in <span id="hintCountdown">{{ GAME_SETTINGS.HINT_DELAY_SECONDS }}</span> s){% endif %}</span>
@@ -58,17 +59,20 @@
             </form>
 
             <form method="post" action="{{ url_for('skip', id=clue_id|int) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-outline-warning btn-lg mb-3" aria-label="Skip this clue">Skip</button>
             </form>
 
             {% if answer_type == "text" %}
               <form method="post" action="{{ url_for('submit', id=clue_id|int) }}" class="d-flex flex-wrap gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <label for="answerField" class="visually-hidden">Answer</label>
                 <input id="answerField" type="text" class="form-control form-control-lg" name="answer" placeholder="Enter answer" required aria-label="Answer">
                 <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Submit answer">Submit Answer</button>
               </form>
             {% elif answer_type == "mcq" %}
               <form method="post" action="{{ url_for('submit', id=clue_id|int) }}" class="d-flex flex-column gap-2">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <fieldset class="pastel-border p-2 mb-2">
                   <legend class="visually-hidden">Choose an answer</legend>
                   {% if mcq_options %}
@@ -86,6 +90,7 @@
               </form>
             {% else %}
               <form method="post" action="{{ url_for('submit', id=clue_id|int) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Mark as found and go to next">I found it / Next</button>
               </form>
             {% endif %}
