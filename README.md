@@ -190,6 +190,39 @@ Notes
 - Scoring logic is unchanged; settings simply control penalties and delay values.
 - Preview links do not record progress or modify the database.
 
+## LAN HTTPS (self-signed)
+
+This project can serve HTTPS on your LAN without any external domain or Let’s Encrypt by running an Nginx reverse proxy inside Docker:
+- TLS is provided on host port 18443.
+- The proxy forwards requests to the Flask app on `hunt:8080` inside the Docker network.
+- A self-signed certificate is auto-generated on first start, with the LAN IP embedded in the certificate’s Subject Alternative Name (SAN).
+- Browsers will show a one-time certificate warning. This is expected for a self-signed certificate in a local environment.
+
+How to run
+```
+# Set your LAN IP (or put it in a .env)
+export LAN_IP=192.168.1.246
+
+# Build and start only the proxy (the app service 'hunt' is already part of compose)
+docker compose build proxy
+docker compose up -d proxy
+
+# Visit the HTTPS endpoint (accept the self-signed certificate warning)
+# Replace $LAN_IP with your actual LAN IP
+https://$LAN_IP:18443
+```
+Notes:
+- If `LAN_IP` is not set, it defaults to `192.168.1.246` (as defined in docker-compose).
+- On first container start, the proxy will create `reverse-proxy/certs/server.crt` and `server.key` with SAN = `IP:${LAN_IP}`.
+
+NFC/QR and absolute URLs
+- Point NFC/QR codes to: `https://<LAN_IP>:18443/clue/1` (or the correct clue path).
+- The app is configured with ProxyFix and `PREFERRED_URL_SCHEME="https"` so generated external links (e.g., QR exports using `_external=True`) prefer HTTPS when accessed via the proxy.
+
+Keep HTTP fallback
+- The existing plain HTTP mapping on `18080` remains for debugging or fallback: `http://<LAN_IP>:18080`
+- No database or scoring changes were made for HTTPS.
+
 ## Polish & Admin Tools
 
 - Dark/Light mode toggle in the navbar; remembered per device (localStorage).

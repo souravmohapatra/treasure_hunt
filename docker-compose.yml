@@ -12,6 +12,21 @@ services:
       FIRST_CLUE_ID: "${FIRST_CLUE_ID:-1}"
       FINAL_CLUE_ID: "${FINAL_CLUE_ID:-6}"
       HINT_DELAY_SECONDS: "${HINT_DELAY_SECONDS:-20}"
+    expose:
+      - "8080"
     volumes:
       - ./data:/app/data
+    restart: unless-stopped
+
+  proxy:
+    build: ./reverse-proxy
+    container_name: treasure-hunt-proxy
+    environment:
+      LAN_IP: "${LAN_IP:-192.168.1.246}"
+    depends_on:
+      - hunt
+    ports:
+      - "18443:443"
+    volumes:
+      - ./reverse-proxy/certs:/etc/nginx/certs
     restart: unless-stopped

@@ -23,6 +23,7 @@ from flask import (
     send_from_directory,
 )
 
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.utils import secure_filename
 from PIL import Image
 from flask_wtf import CSRFProtect
@@ -35,6 +36,9 @@ app = Flask(__name__)
 app.config.from_object("config")
 # Limit uploads to 2 MB
 app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024
+# Make Flask respect reverse proxy headers and prefer HTTPS for URL generation
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+app.config.setdefault("PREFERRED_URL_SCHEME", "https")
 
 # Ensure data/ exists for SQLite volume mapping and uploads dir
 os.makedirs("data", exist_ok=True)
