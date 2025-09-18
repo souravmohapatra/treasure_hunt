@@ -4,4 +4,4 @@ __pycache__/
 .env
 venv/
 .llm-env/
-
+data/game.db
