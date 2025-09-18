@@ -50,25 +50,25 @@
           {% endif %}
 
           <div class="d-flex flex-wrap align-items-end gap-2 mt-3">
-            <form method="post" action="{{ url_for('hint', id=clue_id) }}">
+            <form method="post" action="{{ url_for('hint', id=clue_id|int) }}">
               <button id="hintBtn" type="submit" class="btn btn-outline-info btn-lg mb-3" aria-label="Use hint"
                       data-hint-delay="{{ GAME_SETTINGS.HINT_DELAY_SECONDS }}" {% if not hint_revealed %}disabled{% endif %}>
                 <span id="hintBtnLabel">{% if hint_revealed %}Use Hint{% else %}Hint (available in <span id="hintCountdown">{{ GAME_SETTINGS.HINT_DELAY_SECONDS }}</span> s){% endif %}</span>
               </button>
             </form>
 
-            <form method="post" action="{{ url_for('skip', id=clue_id) }}">
+            <form method="post" action="{{ url_for('skip', id=clue_id|int) }}">
               <button type="submit" class="btn btn-outline-warning btn-lg mb-3" aria-label="Skip this clue">Skip</button>
             </form>
 
             {% if answer_type == "text" %}
-              <form method="post" action="{{ url_for('submit', id=clue_id) }}" class="d-flex flex-wrap gap-2">
+              <form method="post" action="{{ url_for('submit', id=clue_id|int) }}" class="d-flex flex-wrap gap-2">
                 <label for="answerField" class="visually-hidden">Answer</label>
                 <input id="answerField" type="text" class="form-control form-control-lg" name="answer" placeholder="Enter answer" required aria-label="Answer">
                 <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Submit answer">Submit Answer</button>
               </form>
             {% else %}
-              <form method="post" action="{{ url_for('submit', id=clue_id) }}">
+              <form method="post" action="{{ url_for('submit', id=clue_id|int) }}">
                 <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Mark as found and go to next">I found it / Next</button>
               </form>
             {% endif %}

@@ -20,6 +20,8 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from typing import Optional
+import uuid
+import random
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import UniqueConstraint, Boolean, Integer, String, Text, DateTime, ForeignKey, text
@@ -60,6 +62,7 @@ class Clue(db.Model):
     answer_type: Mapped[str] = mapped_column(String(16), nullable=False, default="tap")  # "tap" or "text"
     answer_payload: Mapped[str] = mapped_column(Text, nullable=False, default="")
     hint_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    slug: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True, index=True)
     # Optional image fields
     image_filename: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     image_alt: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -128,6 +131,20 @@ def _sqlite_db_path_from_uri(uri: str) -> Optional[str]:
     return uri[len(prefix):]
 
 
+def generate_readable_slug(existing: set[str]) -> str:
+    adjectives = [
+        "amber", "aqua", "azure", "coral", "ivory", "jade", "lilac", "mint",
+        "peach", "plum", "rose", "sage", "sunny", "violet", "silver", "golden"
+    ]
+    nouns = [
+        "banana", "caterpillar", "comet", "river", "meadow", "maple", "pebble", "harbor",
+        "lantern", "puzzle", "galaxy", "marble", "sunrise", "breeze", "willow", "orchid"
+    ]
+    while True:
+        slug = f"{random.choice(adjectives)}-{random.choice(nouns)}-{uuid.uuid4().hex[:4]}"
+        if slug not in existing:
+            return slug
+
 def init_app_db(app) -> None:
     """
     Bind SQLAlchemy to the Flask app, ensure the data directory exists,
@@ -151,7 +168,7 @@ def init_app_db(app) -> None:
             # Even if file exists, ensure tables are present (idempotent)
             db.create_all()
 
-        # Lightweight migration: ensure clue image columns exist (SQLite)
+        # Lightweight migration: ensure clue image/slug columns exist (SQLite)
         try:
             cols = {row[1] for row in db.session.execute(text("PRAGMA table_info('clues')")).fetchall()}
             if 'image_filename' not in cols:
@@ -160,6 +177,26 @@ def init_app_db(app) -> None:
                 db.session.execute(text("ALTER TABLE clues ADD COLUMN image_alt VARCHAR(255)"))
             if 'image_caption' not in cols:
                 db.session.execute(text("ALTER TABLE clues ADD COLUMN image_caption TEXT"))
+            if 'slug' not in cols:
+                db.session.execute(text("ALTER TABLE clues ADD COLUMN slug VARCHAR(64)"))
+            # Enforce uniqueness at DB level where possible
+            db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_clues_slug ON clues(slug)"))
+            db.session.commit()
+
+            # Backfill missing slugs
+            existing = {
+                s for (s,) in db.session.execute(text("SELECT slug FROM clues WHERE slug IS NOT NULL AND slug != ''")).fetchall()
+            }
+            missing = db.session.execute(
+                text("SELECT id FROM clues WHERE slug IS NULL OR slug = ''")
+            ).fetchall()
+            for (clue_id,) in missing:
+                slug = generate_readable_slug(existing)
+                db.session.execute(
+                    text("UPDATE clues SET slug = :slug WHERE id = :id"),
+                    {"slug": slug, "id": clue_id},
+                )
+                existing.add(slug)
             db.session.commit()
         except Exception:
             db.session.rollback()
@@ -178,7 +215,10 @@ def seed_default_clues() -> None:
         return
 
     to_add: list[Clue] = []
+    existing_slugs: set[str] = set()
     for i in range(1, 7):
+        slug = generate_readable_slug(existing_slugs)
+        existing_slugs.add(slug)
         to_add.append(
             Clue(
                 id=i,  # set explicit ids so routes /clue/<id> map cleanly to 1..6
@@ -188,6 +228,7 @@ def seed_default_clues() -> None:
                 answer_type="tap",
                 answer_payload="",
                 hint_text=f"Hint for Clue {i}",
+                slug=slug,
                 order_index=i,
                 is_final=(i == 6),
             )

@@ -27,7 +27,7 @@ from werkzeug.utils import secure_filename
 from PIL import Image
 from flask_wtf import CSRFProtect
 from forms import ClueForm, SettingsForm, CONFIG_KEY_HINT_DELAY_SECONDS, CONFIG_KEY_POINTS_SOLVE, CONFIG_KEY_PENALTY_HINT, CONFIG_KEY_PENALTY_SKIP, CONFIG_KEY_TIME_PENALTY_WINDOW_SECONDS, CONFIG_KEY_TIME_PENALTY_POINTS
-from models import db, Team, Clue, Progress, Config, init_app_db
+from models import db, Team, Clue, Progress, Config, init_app_db, generate_readable_slug
 
 # App setup
 app = Flask(__name__)
@@ -224,12 +224,16 @@ def clue(id: int):
             clue=clue_obj,
         )
 
+    # If this is a tap-style clue with a slug, redirect to the NFC-friendly URL
+    clue_obj = Clue.query.get(id)
+    if clue_obj and clue_obj.answer_type == "tap" and clue_obj.slug:
+        return redirect(url_for("clue_by_slug", slug=clue_obj.slug))
+
     team = get_current_team_record()
     if not team:
         flash("Pick a team name to start.", "warning")
         return redirect(url_for("index"))
 
-    clue_obj = Clue.query.get(id)
     if not clue_obj:
         # If clue doesn't exist, finish the game
         return redirect(url_for("finish"))
@@ -237,7 +241,17 @@ def clue(id: int):
     prog = _ensure_progress(team, clue_obj)
 
     # Body based on assigned variant
-    body_text = clue_obj.body_variant_a if prog.variant == "A" else clue_obj.body_variant_b
+    body_a = (clue_obj.body_variant_a or "").strip()
+    body_b = (clue_obj.body_variant_b or "").strip()
+    display_variant = prog.variant
+    if display_variant == "A":
+        body_text = body_a if body_a else (body_b if body_b else "")
+        if not body_a and body_b:
+            display_variant = "B"
+    else:
+        body_text = body_b if body_b else (body_a if body_a else "")
+        if not body_b and body_a:
+            display_variant = "A"
 
     # If hint was already used, show it again via flash for visibility in current templates
     if prog.used_hint and clue_obj.hint_text:
@@ -246,7 +260,68 @@ def clue(id: int):
     return render_template(
         "clue.html",
         clue_id=clue_obj.id,
-        variant=prog.variant,
+        variant=display_variant,
+        title=clue_obj.title,
+        body_text=body_text,
+        hint_text=clue_obj.hint_text,
+        answer_type=clue_obj.answer_type,
+        hint_revealed=prog.used_hint,
+        clue=clue_obj,
+    )
+
+
+@app.get("/<slug>")
+def clue_by_slug(slug: str):
+    """
+    NFC-friendly route for tap-style clues.
+    Renders the clue identified by its slug (readable phrase).
+    """
+    # Preview support: /<slug>?variant=A|B
+    preview_variant = (request.args.get("variant") or "").strip().upper()
+    clue_obj = Clue.query.filter_by(slug=slug).first()
+    if not clue_obj:
+        return redirect(url_for("finish"))
+
+    if preview_variant in ("A", "B"):
+        body_text = clue_obj.body_variant_a if preview_variant == "A" else clue_obj.body_variant_b
+        return render_template(
+            "clue.html",
+            clue_id=clue_obj.id,
+            variant=preview_variant,
+            title=clue_obj.title,
+            body_text=body_text,
+            hint_text=clue_obj.hint_text,
+            answer_type=clue_obj.answer_type,
+            hint_revealed=False,
+            clue=clue_obj,
+        )
+
+    team = get_current_team_record()
+    if not team:
+        flash("Pick a team name to start.", "warning")
+        return redirect(url_for("index"))
+
+    # Ensure progress and render according to assigned variant
+    prog = _ensure_progress(team, clue_obj)
+    body_a = (clue_obj.body_variant_a or "").strip()
+    body_b = (clue_obj.body_variant_b or "").strip()
+    display_variant = prog.variant
+    if display_variant == "A":
+        body_text = body_a if body_a else (body_b if body_b else "")
+        if not body_a and body_b:
+            display_variant = "B"
+    else:
+        body_text = body_b if body_b else (body_a if body_a else "")
+        if not body_b and body_a:
+            display_variant = "A"
+
+    if prog.used_hint and clue_obj.hint_text:
+        flash(f"Hint: {clue_obj.hint_text}", "warning")
+
+    return render_template(
+        "clue.html",
+        clue_id=clue_obj.id,
+        variant=display_variant,
         title=clue_obj.title,
         body_text=body_text,
         hint_text=clue_obj.hint_text,
@@ -257,13 +332,18 @@ def clue(id: int):
 
 
 @app.post("/submit/<int:id>")
-def submit(id: int):
+@app.post("/submit/<slug>")
+def submit(id: int = None, slug: str = None):
     team = get_current_team_record()
     if not team:
         flash("Pick a team name to start.", "warning")
         return redirect(url_for("index"))
 
-    clue_obj = Clue.query.get(id)
+    clue_obj = None
+    if id is not None:
+        clue_obj = Clue.query.get(id)
+    elif slug is not None:
+        clue_obj = Clue.query.filter_by(slug=slug).first()
     if not clue_obj:
         return redirect(url_for("finish"))
 
@@ -300,13 +380,18 @@ def submit(id: int):
 
 
 @app.post("/hint/<int:id>")
-def hint(id: int):
+@app.post("/hint/<slug>")
+def hint(id: int = None, slug: str = None):
     team = get_current_team_record()
     if not team:
         flash("Pick a team name to start.", "warning")
         return redirect(url_for("index"))
 
-    clue_obj = Clue.query.get(id)
+    clue_obj = None
+    if id is not None:
+        clue_obj = Clue.query.get(id)
+    elif slug is not None:
+        clue_obj = Clue.query.filter_by(slug=slug).first()
     if not clue_obj:
         return redirect(url_for("finish"))
 
@@ -318,18 +403,23 @@ def hint(id: int):
     # Surface the hint via flash so current template shows it
     if clue_obj.hint_text:
         flash(f"Hint: {clue_obj.hint_text}", "warning")
-    flash(f"Hint used for Clue {id}", "info")
-    return redirect(url_for("clue", id=id))
+    flash(f"Hint used for Clue {clue_obj.id}", "info")
+    return redirect(url_for("clue", id=clue_obj.id))
 
 
 @app.post("/skip/<int:id>")
-def skip(id: int):
+@app.post("/skip/<slug>")
+def skip(id: int = None, slug: str = None):
     team = get_current_team_record()
     if not team:
         flash("Pick a team name to start.", "warning")
         return redirect(url_for("index"))
 
-    clue_obj = Clue.query.get(id)
+    clue_obj = None
+    if id is not None:
+        clue_obj = Clue.query.get(id)
+    elif slug is not None:
+        clue_obj = Clue.query.filter_by(slug=slug).first()
     if not clue_obj:
         return redirect(url_for("finish"))
 
@@ -448,6 +538,29 @@ def admin_reset():
     Team.query.delete()
     db.session.commit()
     flash("Game reset. All teams and progress cleared.", "warning")
+    return redirect(url_for("admin"))
+
+
+@app.post("/admin/rotate_slugs")
+def admin_rotate_slugs():
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    # Collect existing slugs to ensure uniqueness
+    existing = {c.slug for c in Clue.query.filter(Clue.slug.isnot(None)).all()}
+
+    # Rotate slugs for all clues
+    for c in Clue.query.order_by(Clue.order_index.asc(), Clue.id.asc()).all():
+        if c.slug:
+            existing.discard(c.slug)  # allow reusing pattern space
+        new_slug = generate_readable_slug(existing)
+        c.slug = new_slug
+        existing.add(new_slug)
+
+    db.session.commit()
+    flash("Clue URLs rotated successfully.", "success")
     return redirect(url_for("admin"))
 
 

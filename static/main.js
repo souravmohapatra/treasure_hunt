@@ -7,7 +7,7 @@
  * No external dependencies; vanilla JS only.
  */
 (function () {
-  'use strict';
+  "use strict";
 
   // ---------------------------
   // Utilities
@@ -17,20 +17,20 @@
   }
 
   function pad2(n) {
-    return n < 10 ? '0' + n : '' + n;
+    return n < 10 ? "0" + n : "" + n;
   }
 
   function formatMMSS(totalSeconds) {
     totalSeconds = Math.max(0, Math.floor(totalSeconds));
     var m = Math.floor(totalSeconds / 60);
     var s = totalSeconds % 60;
-    return pad2(m) + ':' + pad2(s);
+    return pad2(m) + ":" + pad2(s);
   }
 
   // ---------------------------
   // Theme (Light/Dark)
   // ---------------------------
-  var THEME_STORAGE_KEY = 'theme';
+  var THEME_STORAGE_KEY = "theme";
 
   function getStoredTheme() {
     try {
@@ -49,19 +49,22 @@
   }
 
   function systemPrefersDark() {
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return (
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    );
   }
 
   function applyTheme(theme) {
     var body = document.body;
     if (!body) return;
-    var t = theme || (getStoredTheme() || (systemPrefersDark() ? 'dark' : 'light'));
-    body.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light');
+    var t = theme || getStoredTheme() || "light";
+    body.setAttribute("data-theme", t === "dark" ? "dark" : "light");
   }
 
   function toggleTheme() {
-    var current = document.body.getAttribute('data-theme') || 'light';
-    var next = current === 'dark' ? 'light' : 'dark';
+    var current = document.body.getAttribute("data-theme") || "light";
+    var next = current === "dark" ? "light" : "dark";
     applyTheme(next);
     storeTheme(next);
   }
@@ -70,26 +73,26 @@
   // Clue page: progress bar
   // ---------------------------
   function initProgressBar() {
-    var container = document.getElementById('huntProgress');
+    var container = document.getElementById("huntProgress");
     if (!container) return;
-    var current = parseInt(container.getAttribute('data-current') || '0', 10);
-    var total = parseInt(container.getAttribute('data-total') || '0', 10);
+    var current = parseInt(container.getAttribute("data-current") || "0", 10);
+    var total = parseInt(container.getAttribute("data-total") || "0", 10);
     if (!total || total <= 0) return;
     var pct = clamp((current / total) * 100, 0, 100);
-    var bar = container.querySelector('.progress-bar');
+    var bar = container.querySelector(".progress-bar");
     if (bar) {
-      bar.style.width = pct.toFixed(0) + '%';
-      bar.setAttribute('aria-valuenow', String(current));
+      bar.style.width = pct.toFixed(0) + "%";
+      bar.setAttribute("aria-valuenow", String(current));
     }
   }
 
   // ---------------------------
   // Clue page: elapsed timer (client-only)
   // ---------------------------
-  var HUNT_START_KEY = 'huntStartAt';
+  var HUNT_START_KEY = "huntStartAt";
 
   function initElapsedTimer() {
-    var el = document.getElementById('elapsedTimer');
+    var el = document.getElementById("elapsedTimer");
     if (!el) return;
 
     var start = 0;
@@ -122,33 +125,33 @@
   // Clue page: hint countdown
   // ---------------------------
   function initHintCountdown() {
-    var btn = document.getElementById('hintBtn');
+    var btn = document.getElementById("hintBtn");
     if (!btn) return;
     // Only run countdown if the button is disabled (i.e., hint not yet available)
     if (!btn.disabled) return;
 
-    var delay = parseInt(btn.getAttribute('data-hint-delay') || '0', 10);
+    var delay = parseInt(btn.getAttribute("data-hint-delay") || "0", 10);
     if (!delay || delay <= 0) {
       // no delay, enable immediately
       btn.disabled = false;
-      var lbl0 = document.getElementById('hintBtnLabel');
-      if (lbl0) lbl0.textContent = 'Use Hint';
+      var lbl0 = document.getElementById("hintBtnLabel");
+      if (lbl0) lbl0.textContent = "Use Hint";
       return;
     }
 
-    var label = document.getElementById('hintBtnLabel');
-    var countdownSpan = document.getElementById('hintCountdown');
+    var label = document.getElementById("hintBtnLabel");
+    var countdownSpan = document.getElementById("hintCountdown");
     var remaining = delay;
 
     function updateLabel() {
       if (!label) return;
       if (remaining <= 0) {
-        label.textContent = 'Use Hint';
+        label.textContent = "Use Hint";
       } else if (countdownSpan) {
         countdownSpan.textContent = String(remaining);
       } else {
         // Fallback if span missing
-        label.textContent = 'Hint (available in ' + remaining + ' s)';
+        label.textContent = "Hint (available in " + remaining + " s)";
       }
     }
 
@@ -172,19 +175,23 @@
   // ---------------------------
   function refreshElementViaFetch(sourceUrl, sourceSelector, targetSelector) {
     try {
-      fetch(sourceUrl, { headers: { 'X-Requested-With': 'fetch' } })
-        .then(function (res) { return res.ok ? res.text() : null; })
+      fetch(sourceUrl, { headers: { "X-Requested-With": "fetch" } })
+        .then(function (res) {
+          return res.ok ? res.text() : null;
+        })
         .then(function (html) {
           if (!html) return;
           var parser = new DOMParser();
-          var doc = parser.parseFromString(html, 'text/html');
+          var doc = parser.parseFromString(html, "text/html");
           var fresh = doc.querySelector(sourceSelector);
           var target = document.querySelector(targetSelector);
           if (fresh && target) {
             target.innerHTML = fresh.innerHTML;
           }
         })
-        .catch(function () { /* ignore transient errors */ });
+        .catch(function () {
+          /* ignore transient errors */
+        });
     } catch (_) {
       // ignore
     }
@@ -193,12 +200,12 @@
   // ---------------------------
   // Boot
   // ---------------------------
-  document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener("DOMContentLoaded", function () {
     // Theme init & toggle
     applyTheme(); // applies stored/system theme
-    var themeBtn = document.getElementById('themeToggle');
+    var themeBtn = document.getElementById("themeToggle");
     if (themeBtn) {
-      themeBtn.addEventListener('click', function () {
+      themeBtn.addEventListener("click", function () {
         toggleTheme();
       });
     }
@@ -216,6 +223,6 @@
     startHintCountdown: initHintCountdown,
     startElapsedTimer: initElapsedTimer,
     refreshElementViaFetch: refreshElementViaFetch,
-    formatMMSS: formatMMSS
+    formatMMSS: formatMMSS,
   };
 })();

@@ -38,6 +38,9 @@
                 <form method="post" action="{{ url_for('admin_reset') }}" onsubmit="return confirm('Reset game? This clears all teams and progress.');">
                   <button type="submit" class="btn btn-sm btn-danger">Reset game</button>
                 </form>
+                <form method="post" action="{{ url_for('admin_rotate_slugs') }}" onsubmit="return confirm('Rotate all NFC clue URLs? This changes all slugs.');">
+                  <button type="submit" class="btn btn-sm btn-warning mt-2">Rotate NFC URLs</button>
+                </form>
               </div>
             </div>
           </div>
@@ -95,6 +98,9 @@
                 <div class="me-2">
                   <div class="fw-semibold">Clue {{ c.id }}</div>
                   <div class="text-muted small">{{ c.title }}</div>
+                  {% if c.slug %}
+                    <div class="muted small text-truncate cell-constrain">URL: {{ request.host_url }}{{ c.slug }}</div>
+                  {% endif %}
                 </div>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin_qr', clue_id=c.id) }}" aria-label="Download QR for Clue {{ c.id }}">Download QR</a>
               </div>
