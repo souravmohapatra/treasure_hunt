@@ -89,10 +89,16 @@
                 <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Submit answer">Submit Answer</button>
               </form>
             {% else %}
-              <form method="post" action="{{ url_for('submit', id=clue_id|int) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Mark as found and go to next">I found it / Next</button>
-              </form>
+              {% if answer_type == "tap" %}
+                <div class="alert alert-info mb-3" role="alert">
+                  This clue advances via NFC. Find and scan the hidden NFC tag to proceed to the next clue.
+                </div>
+              {% else %}
+                <form method="post" action="{{ url_for('submit', id=clue_id|int) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Mark as found and go to next">I found it / Next</button>
+                </form>
+              {% endif %}
             {% endif %}
 
             <a href="{{ url_for('index') }}" class="btn btn-link" aria-label="Back to Home">Back to Home</a>
