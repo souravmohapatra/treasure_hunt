@@ -150,6 +150,13 @@ footer .small {
     background-color: #0d6efd;
 }
 
+/* Wrapping utility for long URLs and tokens */
+.wrap-text {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
 /* ---------------------------------------
    Mobile touch targets and spacing tweaks
    --------------------------------------- */

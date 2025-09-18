@@ -97,6 +97,7 @@ class Progress(db.Model):
 
     used_hint: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     skipped: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    wrong_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     team: Mapped[Team] = relationship("Team", back_populates="progress_entries")
     clue: Mapped[Clue] = relationship("Clue", back_populates="progress_entries")
@@ -198,6 +199,15 @@ def init_app_db(app) -> None:
                 )
                 existing.add(slug)
             db.session.commit()
+
+            # Ensure progress table has wrong_attempts column (SQLite lightweight migration)
+            try:
+                pcols = {row[1] for row in db.session.execute(text("PRAGMA table_info('progress')")).fetchall()}
+                if 'wrong_attempts' not in pcols:
+                    db.session.execute(text("ALTER TABLE progress ADD COLUMN wrong_attempts INTEGER DEFAULT 0"))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
         except Exception:
             db.session.rollback()
 

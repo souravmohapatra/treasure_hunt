@@ -35,6 +35,17 @@
                 <div class="text-muted small mb-1">Active teams</div>
                 <div class="fs-5">{{ active_teams }}</div>
                 <div class="text-muted small mb-3">Live data from the database.</div>
+                <div class="mb-2">
+                  <div class="text-muted small mb-1">Game status</div>
+                  {% if game_started %}
+                    <span class="badge bg-success">Started</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Not started</span>
+                  {% endif %}
+                </div>
+                <form method="post" action="{{ url_for('admin_start_game') }}" onsubmit="return confirm('Start the game for all teams now?');">
+                  <button type="submit" class="btn btn-sm btn-success{% if game_started %} disabled{% endif %} mt-2" {% if game_started %}disabled{% endif %}>Start Game</button>
+                </form>
                 <form method="post" action="{{ url_for('admin_reset') }}" onsubmit="return confirm('Reset game? This clears all teams and progress.');">
                   <button type="submit" class="btn btn-sm btn-danger">Reset game</button>
                 </form>
@@ -99,7 +110,7 @@
                   <div class="fw-semibold">Clue {{ c.id }}</div>
                   <div class="text-muted small">{{ c.title }}</div>
                   {% if c.slug %}
-                    <div class="muted small text-truncate cell-constrain">URL: {{ request.host_url }}{{ c.slug }}</div>
+                    <div class="muted small wrap-text cell-constrain">URL: {{ request.host_url }}{{ c.slug }}</div>
                   {% endif %}
                 </div>
                 <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('admin_qr', clue_id=c.id) }}" aria-label="Download QR for Clue {{ c.id }}">Download QR</a>

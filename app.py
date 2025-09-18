@@ -121,9 +121,11 @@ def extract_basic_auth_password(req) -> Optional[str]:
 
 @app.context_processor
 def inject_globals():
+    started_cfg = Config.query.get("GAME_STARTED_AT")
     return {
         "GAME_SETTINGS": get_game_settings(),
         "current_team": get_current_team_name(),
+        "game_started": bool(started_cfg and (started_cfg.value or "").strip()),
     }
 
 
@@ -162,10 +164,20 @@ def _compute_score(team: Team) -> Tuple[int, int, int, int, Optional[timedelta]]
     solved_count = sum(1 for p in entries if p.solved_at is not None)
     hint_count = sum(1 for p in entries if p.used_hint)
     skip_count = sum(1 for p in entries if p.skipped)
-    base = 10 * solved_count - 3 * hint_count - 8 * skip_count
+    wrong_attempts = sum((p.wrong_attempts or 0) for p in entries if getattr(p.clue, "answer_type", "").lower() == "mcq")
+    base = 10 * solved_count - 3 * hint_count - 8 * skip_count - 2 * wrong_attempts
     elapsed: Optional[timedelta] = None
     if team.completed_at:
-        elapsed = team.completed_at - team.created_at
+        # If a global game start exists, use it to compute elapsed; else fall back to team start
+        start_dt: Optional[datetime] = None
+        cfg = Config.query.get("GAME_STARTED_AT")
+        if cfg and (cfg.value or "").strip():
+            try:
+                start_dt = datetime.fromisoformat(cfg.value.strip())
+            except Exception:
+                start_dt = None
+        baseline = start_dt or team.created_at
+        elapsed = team.completed_at - baseline
         # -1 per 2 full minutes elapsed
         penalty = int(elapsed.total_seconds() // 120)
         base -= penalty
@@ -175,7 +187,10 @@ def _compute_score(team: Team) -> Tuple[int, int, int, int, Optional[timedelta]]
 # Routes
 @app.get("/")
 def index():
-    return render_template("index.html")
+    total = Clue.query.count()
+    started_cfg = Config.query.get("GAME_STARTED_AT")
+    game_started = bool(started_cfg and (started_cfg.value or "").strip())
+    return render_template("index.html", total_clues=total, game_started=game_started)
 
 
 @app.post("/start")
@@ -200,6 +215,13 @@ def start():
     if not first:
         flash("No clues configured.", "warning")
         return redirect(url_for("index"))
+
+    # If the game hasn't been started by an admin, keep team on the landing page
+    started_cfg = Config.query.get("GAME_STARTED_AT")
+    if not (started_cfg and (started_cfg.value or "").strip()):
+        flash("Waiting for the game to start. Please standby.", "info")
+        return redirect(url_for("index"))
+
     return redirect(url_for("clue", id=first.id))
 
 
@@ -212,6 +234,14 @@ def clue(id: int):
         if not clue_obj:
             return redirect(url_for("finish"))
         body_text = clue_obj.body_variant_a if preview_variant == "A" else clue_obj.body_variant_b
+        mcq_options = None
+        try:
+            if (clue_obj.answer_type or "").lower() == "mcq":
+                import json as _json
+                _opts = _json.loads(clue_obj.answer_payload or "[]")
+                mcq_options = [str(o) for o in _opts if isinstance(o, str)]
+        except Exception:
+            mcq_options = []
         return render_template(
             "clue.html",
             clue_id=clue_obj.id,
@@ -222,6 +252,7 @@ def clue(id: int):
             answer_type=clue_obj.answer_type,
             hint_revealed=False,
             clue=clue_obj,
+            mcq_options=mcq_options,
         )
 
     # If this is a tap-style clue with a slug, redirect to the NFC-friendly URL
@@ -232,6 +263,12 @@ def clue(id: int):
     team = get_current_team_record()
     if not team:
         flash("Pick a team name to start.", "warning")
+        return redirect(url_for("index"))
+
+    # Gate clues until admin starts the game
+    started_cfg = Config.query.get("GAME_STARTED_AT")
+    if not (started_cfg and (started_cfg.value or "").strip()):
+        flash("The game has not started yet. Please wait on the landing page.", "warning")
         return redirect(url_for("index"))
 
     if not clue_obj:
@@ -257,6 +294,14 @@ def clue(id: int):
     if prog.used_hint and clue_obj.hint_text:
         flash(f"Hint: {clue_obj.hint_text}", "warning")
 
+    mcq_options = None
+    try:
+        if (clue_obj.answer_type or "").lower() == "mcq":
+            import json as _json
+            _opts = _json.loads(clue_obj.answer_payload or "[]")
+            mcq_options = [str(o) for o in _opts if isinstance(o, str)]
+    except Exception:
+        mcq_options = []
     return render_template(
         "clue.html",
         clue_id=clue_obj.id,
@@ -267,6 +312,7 @@ def clue(id: int):
         answer_type=clue_obj.answer_type,
         hint_revealed=prog.used_hint,
         clue=clue_obj,
+        mcq_options=mcq_options,
     )
 
 
@@ -284,6 +330,14 @@ def clue_by_slug(slug: str):
 
     if preview_variant in ("A", "B"):
         body_text = clue_obj.body_variant_a if preview_variant == "A" else clue_obj.body_variant_b
+        mcq_options = None
+        try:
+            if (clue_obj.answer_type or "").lower() == "mcq":
+                import json as _json
+                _opts = _json.loads(clue_obj.answer_payload or "[]")
+                mcq_options = [str(o) for o in _opts if isinstance(o, str)]
+        except Exception:
+            mcq_options = []
         return render_template(
             "clue.html",
             clue_id=clue_obj.id,
@@ -294,11 +348,18 @@ def clue_by_slug(slug: str):
             answer_type=clue_obj.answer_type,
             hint_revealed=False,
             clue=clue_obj,
+            mcq_options=mcq_options,
         )
 
     team = get_current_team_record()
     if not team:
         flash("Pick a team name to start.", "warning")
+        return redirect(url_for("index"))
+
+    # Gate clues until admin starts the game
+    started_cfg = Config.query.get("GAME_STARTED_AT")
+    if not (started_cfg and (started_cfg.value or "").strip()):
+        flash("The game has not started yet. Please wait on the landing page.", "warning")
         return redirect(url_for("index"))
 
     # Ensure progress and render according to assigned variant
@@ -318,6 +379,14 @@ def clue_by_slug(slug: str):
     if prog.used_hint and clue_obj.hint_text:
         flash(f"Hint: {clue_obj.hint_text}", "warning")
 
+    mcq_options = None
+    try:
+        if (clue_obj.answer_type or "").lower() == "mcq":
+            import json as _json
+            _opts = _json.loads(clue_obj.answer_payload or "[]")
+            mcq_options = [str(o) for o in _opts if isinstance(o, str)]
+    except Exception:
+        mcq_options = []
     return render_template(
         "clue.html",
         clue_id=clue_obj.id,
@@ -328,6 +397,7 @@ def clue_by_slug(slug: str):
         answer_type=clue_obj.answer_type,
         hint_revealed=prog.used_hint,
         clue=clue_obj,
+        mcq_options=mcq_options,
     )
 
 
@@ -355,8 +425,24 @@ def submit(id: int = None, slug: str = None):
         if submitted != expected:
             flash("Try again.", "danger")
             return redirect(url_for("clue", id=clue_obj.id))
+    elif clue_obj.answer_type == "mcq":
+        # Treat MCQ as validated only if an 'answer' is provided.
+        # Wrong MCQ attempts increment a penalty counter on Progress.
+        submitted = (request.form.get("answer") or "").strip().lower()
+        if submitted:
+            try:
+                import json as _json
+                answers = _json.loads(clue_obj.answer_payload or "[]")
+                answers_norm = {str(a).strip().lower() for a in answers if isinstance(a, str)}
+            except Exception:
+                answers_norm = set()
+            if submitted not in answers_norm:
+                prog.wrong_attempts = (prog.wrong_attempts or 0) + 1
+                db.session.commit()
+                flash("Try again.", "danger")
+                return redirect(url_for("clue", id=clue_obj.id))
 
-    # For tap or correct text, mark solved
+    # For tap, correct text, or MCQ with no/valid answer, mark solved
     if not prog.solved_at:
         prog.solved_at = datetime.utcnow()
     db.session.commit()
@@ -561,6 +647,25 @@ def admin_rotate_slugs():
 
     db.session.commit()
     flash("Clue URLs rotated successfully.", "success")
+    return redirect(url_for("admin"))
+
+
+@app.post("/admin/start_game")
+def admin_start_game():
+    admin_password_expected = app.config.get("ADMIN_PASSWORD", "")
+    provided_password = extract_basic_auth_password(request)
+    if not admin_password_expected or provided_password != admin_password_expected:
+        return unauthorized_response()
+
+    # Set a global game start timestamp (ISO 8601) so all teams start together
+    now_iso = datetime.utcnow().isoformat()
+    row = Config.query.get("GAME_STARTED_AT")
+    if row:
+        row.value = now_iso
+    else:
+        db.session.add(Config(key="GAME_STARTED_AT", value=now_iso))
+    db.session.commit()
+    flash("Game started for all teams.", "success")
     return redirect(url_for("admin"))
 
 

@@ -67,6 +67,23 @@
                 <input id="answerField" type="text" class="form-control form-control-lg" name="answer" placeholder="Enter answer" required aria-label="Answer">
                 <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Submit answer">Submit Answer</button>
               </form>
+            {% elif answer_type == "mcq" %}
+              <form method="post" action="{{ url_for('submit', id=clue_id|int) }}" class="d-flex flex-column gap-2">
+                <fieldset class="pastel-border p-2 mb-2">
+                  <legend class="visually-hidden">Choose an answer</legend>
+                  {% if mcq_options %}
+                    {% for opt in mcq_options %}
+                      <div class="form-check my-1">
+                        <input class="form-check-input" type="radio" name="answer" id="mcq_{{ loop.index }}" value="{{ opt }}" required>
+                        <label class="form-check-label" for="mcq_{{ loop.index }}">{{ opt }}</label>
+                      </div>
+                    {% endfor %}
+                  {% else %}
+                    <div class="text-muted small">No options configured.</div>
+                  {% endif %}
+                </fieldset>
+                <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Submit answer">Submit Answer</button>
+              </form>
             {% else %}
               <form method="post" action="{{ url_for('submit', id=clue_id|int) }}">
                 <button type="submit" class="btn btn-success btn-lg mb-3" aria-label="Mark as found and go to next">I found it / Next</button>

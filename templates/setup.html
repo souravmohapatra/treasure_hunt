@@ -110,7 +110,7 @@
                 <div class="col-12 col-md-6">
                   <label class="form-label">Slug (read-only)</label>
                   <input type="text" class="form-control" value="{{ clue.slug }}" readonly>
-                  <div class="form-text">NFC URL: {{ request.host_url.rstrip('/') }}/{{ clue.slug }}</div>
+                  <div class="form-text wrap-text cell-constrain">NFC URL: {{ request.host_url.rstrip('/') }}/{{ clue.slug }}</div>
                 </div>
                 {% endif %}
 

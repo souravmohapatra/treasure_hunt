@@ -7,12 +7,21 @@
     <div class="col-12 col-md-10 col-lg-8">
       <div class="mb-4">
         <h1 class="mb-2">Welcome to the Treasure Hunt</h1>
-        <p class="lead mb-1">Enter your team name to begin the game.</p>
+        {% if game_started %}
+          <p class="lead mb-1">Enter your team name to begin the game.</p>
+        {% else %}
+          <p class="lead mb-1">Enter your team name to join. The game will start when the organizer presses Start.</p>
+        {% endif %}
         <p class="text-muted small">We’ll create your team in the database and use a secure session cookie for this browser.</p>
       </div>
 
       <div class="card shadow-sm">
         <div class="card-body">
+          {% if not game_started %}
+            <div class="alert alert-warning mb-3" role="alert">
+              Waiting for the game to start. You can join now and keep this page open.
+            </div>
+          {% endif %}
           <form method="post" action="{{ url_for('start') }}" class="needs-validation" novalidate>
             <div class="mb-3">
               <label for="team_name" class="form-label">Team name</label>
@@ -29,7 +38,7 @@
               <div class="form-text text-muted">Pick something fun. You can reuse it later in the same browser.</div>
             </div>
             <div class="d-flex align-items-center gap-2">
-              <button type="submit" class="btn btn-primary">Start</button>
+              <button type="submit" class="btn btn-primary">{% if game_started %}Start{% else %}Join{% endif %}</button>
               <a href="{{ url_for('leaderboard') }}" class="btn btn-outline-secondary">View Leaderboard</a>
             </div>
           </form>
@@ -38,7 +47,7 @@
 
       <div class="mt-4">
         <p class="text-muted small mb-1">
-          The game currently runs from Clue {{ GAME_SETTINGS.FIRST_CLUE_ID }} to {{ GAME_SETTINGS.FINAL_CLUE_ID }}.
+          There are {{ total_clues }} clues currently configured.
           Hints are available with a placeholder delay of {{ GAME_SETTINGS.HINT_DELAY_SECONDS }} seconds.
         </p>
         <p class="text-muted small mb-0">
