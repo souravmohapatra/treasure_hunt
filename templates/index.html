@@ -23,6 +23,7 @@
             </div>
           {% endif %}
           <form method="post" action="{{ url_for('start') }}" class="needs-validation" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="mb-3">
               <label for="team_name" class="form-label">Team name</label>
               <input
