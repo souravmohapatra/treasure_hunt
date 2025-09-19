@@ -213,6 +213,70 @@
     // Clue page enhancements
     initProgressBar();
     initElapsedTimer();
+    // Landing page hero & join bottom sheet
+    try {
+      var prefersReduced =
+        window.matchMedia &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var heroCard = document.querySelector(".hero-card");
+      if (!prefersReduced && window.gsap && heroCard) {
+        gsap.from(heroCard, {
+          duration: 0.9,
+          y: 24,
+          opacity: 0,
+          ease: "power3.out",
+        });
+      }
+      var enterBtn = document.getElementById("enterHuntBtn");
+      var join = document.getElementById("join");
+      var teamInput = document.getElementById("team_name");
+      if (enterBtn && join) {
+        enterBtn.addEventListener("click", function (e) {
+          if (join.classList) {
+            e.preventDefault();
+            join.classList.add("sheet-overlay");
+            // force layout before adding visible class for transition
+            void join.offsetWidth;
+            join.classList.add("sheet-visible");
+            document.body.style.overflow = "hidden";
+            setTimeout(function () {
+              if (teamInput) {
+                try {
+                  teamInput.focus();
+                } catch (_) {}
+              }
+            }, 250);
+          }
+        });
+      }
+      if (join) {
+        // Close on outside click
+        join.addEventListener("click", function (ev) {
+          if (ev.target.closest(".card")) return;
+          if (join.classList.contains("sheet-overlay")) {
+            join.classList.remove("sheet-visible");
+            setTimeout(function () {
+              join.classList.remove("sheet-overlay");
+              document.body.style.overflow = "";
+            }, 300);
+          }
+        });
+      }
+      // Close on Escape
+      document.addEventListener("keydown", function (ev) {
+        if (
+          ev.key === "Escape" &&
+          join &&
+          join.classList.contains("sheet-visible")
+        ) {
+          join.classList.remove("sheet-visible");
+          setTimeout(function () {
+            join.classList.remove("sheet-overlay");
+            document.body.style.overflow = "";
+          }, 300);
+        }
+      });
+    } catch (_) {}
     initHintCountdown();
   });
 

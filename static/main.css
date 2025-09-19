@@ -198,3 +198,137 @@ footer .small {
         padding-bottom: 1rem !important;
     }
 }
+
+/* --- Hero / Gradient --- */
+.hero-wrap {
+    min-height: 100vh;
+    position: relative;
+}
+.hero-gradient {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(
+            1200px 800px at 20% 20%,
+            var(--accent) 0%,
+            transparent 60%
+        ),
+        radial-gradient(
+            1000px 700px at 80% 30%,
+            var(--accent-2) 0%,
+            transparent 60%
+        ),
+        radial-gradient(
+            900px 700px at 50% 80%,
+            var(--primary) 0%,
+            transparent 60%
+        ),
+        linear-gradient(180deg, var(--bg) 0%, var(--card) 100%);
+    filter: saturate(1.05);
+    animation: hueShift 18s ease-in-out infinite alternate;
+    z-index: 0;
+}
+@keyframes hueShift {
+    0% {
+        filter: hue-rotate(0deg) saturate(1.05);
+    }
+    100% {
+        filter: hue-rotate(12deg) saturate(1.1);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hero-gradient {
+        animation: none;
+    }
+}
+
+/* --- Floating shapes --- */
+.floating-shapes {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+.shape {
+    position: absolute;
+    width: 140px;
+    height: 140px;
+    border-radius: 24px;
+    opacity: 0.2;
+    background: var(--primary);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    animation: floatY 12s ease-in-out infinite;
+}
+.shape.s1 {
+    top: 15%;
+    left: 10%;
+}
+.shape.s2 {
+    top: 65%;
+    left: 75%;
+    background: var(--accent);
+    animation-duration: 16s;
+}
+.shape.s3 {
+    top: 25%;
+    left: 60%;
+    background: var(--accent-2);
+    animation-duration: 14s;
+}
+@keyframes floatY {
+    0%,
+    100% {
+        transform: translateY(-8px);
+    }
+    50% {
+        transform: translateY(8px);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .shape {
+        animation: none;
+    }
+}
+
+/* --- Glass card --- */
+.glassy {
+    background: color-mix(in srgb, var(--card) 70%, transparent);
+    backdrop-filter: blur(8px);
+    border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    border-radius: 1rem;
+}
+.hero-title {
+    letter-spacing: 0.3px;
+}
+.hero-cta {
+    padding-inline: 1.25rem;
+}
+
+/* --- Join sheet (slide-up overlay for JS users) --- */
+.join-sheet {
+    position: relative;
+    transition:
+        transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.4s ease;
+}
+.join-sheet.sheet-overlay {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--card);
+    border-top-left-radius: 1.25rem;
+    border-top-right-radius: 1.25rem;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.16);
+    transform: translateY(100%);
+    opacity: 0;
+    z-index: 20;
+}
+.join-sheet.sheet-visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+/* keep anchor target spacing for no-JS fallback */
+#join:target {
+    scroll-margin-top: 20vh;
+}
