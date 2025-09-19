@@ -74,14 +74,18 @@
               <form method="post" action="{{ url_for('submit', id=clue_id|int) }}" class="d-flex flex-column gap-2">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <fieldset class="pastel-border p-2 mb-2">
-                  <legend class="visually-hidden">Choose an answer</legend>
+                  <legend class="visually-hidden">Choose the correct answer</legend>
                   {% if mcq_options %}
-                    {% for opt in mcq_options %}
-                      <div class="form-check my-1">
-                        <input class="form-check-input" type="radio" name="answer" id="mcq_{{ loop.index }}" value="{{ opt }}" required>
-                        <label class="form-check-label" for="mcq_{{ loop.index }}">{{ opt }}</label>
-                      </div>
-                    {% endfor %}
+                    <div class="row row-cols-2 g-2">
+                      {% for opt in mcq_options %}
+                        <div class="col">
+                          <div class="form-check">
+                            <input class="form-check-input" type="radio" name="answer" id="mcq_{{ loop.index }}" value="{{ opt }}" required>
+                            <label class="form-check-label" for="mcq_{{ loop.index }}">{{ opt }}</label>
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
                   {% else %}
                     <div class="text-muted small">No options configured.</div>
                   {% endif %}

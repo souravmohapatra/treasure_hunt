@@ -42,12 +42,18 @@
                 </div>
 
                 <div class="col-12 col-md-8">
-                  <label class="form-label" for="{{ form.answer_payload.id }}">Accepted answers</label>
+                  <label class="form-label" for="{{ form.answer_payload.id }}">Options</label>
                   {{ form.answer_payload(class="form-control", rows="4") }}
                   <div class="form-text">
                     For Text: comma-separated list. For MCQ: JSON array of strings. For Tap: leave blank.
                   </div>
                   {% for e in form.answer_payload.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                </div>
+                <div class="col-12 col-md-6">
+                  <label class="form-label" for="{{ form.answer_correct.id }}">Correct answer</label>
+                  {{ form.answer_correct(class="form-control") }}
+                  <div class="form-text">For MCQ: must match one of the options exactly.</div>
+                  {% for e in form.answer_correct.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
                 </div>
 
                 <div class="col-12">

@@ -54,7 +54,7 @@ class ClueForm(FlaskForm):
         validators=[DataRequired()],
     )
     answer_payload = TextAreaField(
-        "Accepted answers",
+        "Options",
         description=(
             "For Text: comma-separated list (e.g., 'alpha, beta'). "
             "For MCQ: JSON array of strings (e.g., [\"A\",\"B\",\"C\"]). "
@@ -62,6 +62,12 @@ class ClueForm(FlaskForm):
         ),
         validators=[Optional()],
         render_kw={"rows": 3, "placeholder": "Depends on answer type"},
+    )
+    answer_correct = StringField(
+        "Correct answer",
+        description="For MCQ: must match one of the Options exactly.",
+        validators=[Optional(), Length(max=255)],
+        render_kw={"placeholder": "One of the options (MCQ only)"},
     )
     hint_text = TextAreaField(
         "Hint text",
@@ -99,7 +105,7 @@ class ClueForm(FlaskForm):
         payload = (field.data or "").strip()
 
         if atype in ("text", "mcq") and not payload:
-            raise ValidationError("Accepted answers are required for Text or MCQ types.")
+            raise ValidationError("Options are required for Text or MCQ types.")
 
         if atype == "mcq" and payload:
             try:
@@ -108,11 +114,29 @@ class ClueForm(FlaskForm):
                 raise ValidationError(f"Invalid JSON: {e.msg}") from e
 
             if not isinstance(parsed, list) or not all(isinstance(x, str) for x in parsed):
-                raise ValidationError("MCQ accepted answers must be a JSON array of strings.")
+                raise ValidationError("MCQ options must be a JSON array of strings.")
 
         # For 'text', free-form comma-separated string is fine.
         # For 'tap', payload can be empty; if provided, we accept it but it is unused.
 
+
+    def validate_answer_correct(self, field: StringField) -> None:
+        """Ensure MCQ has a correct answer present and that it is among the options."""
+        atype = (self.answer_type.data or "").strip().lower()
+        if atype != "mcq":
+            return  # Only enforce for MCQ
+        correct = (field.data or "").strip()
+        if not correct:
+            raise ValidationError("Correct answer is required for MCQ.")
+        # Parse options from answer_payload
+        try:
+            options: Any = json.loads(self.answer_payload.data or "[]")
+        except json.JSONDecodeError:
+            raise ValidationError("Provide valid MCQ options first (JSON array of strings).")
+        if not isinstance(options, list) or not all(isinstance(x, str) for x in options):
+            raise ValidationError("MCQ options must be a JSON array of strings.")
+        if correct not in options:
+            raise ValidationError("Correct answer must match one of the options exactly.")
 
 class SettingsForm(FlaskForm):
     """

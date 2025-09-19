@@ -423,26 +423,23 @@ def submit(id: int = None, slug: str = None):
 
     if clue_obj.answer_type == "text":
         submitted = (request.form.get("answer") or "").strip().lower()
-        expected = (clue_obj.answer_payload or "").strip().lower()
-        if submitted != expected:
+        # Allow multiple acceptable answers (comma-separated in answer_payload)
+        raw = (clue_obj.answer_payload or "")
+        options = [s.strip().lower() for s in raw.split(",") if s.strip()] if raw else []
+        if submitted not in set(options):
             flash("Try again.", "danger")
             return redirect(url_for("clue", id=clue_obj.id))
     elif clue_obj.answer_type == "mcq":
-        # Treat MCQ as validated only if an 'answer' is provided.
-        # Wrong MCQ attempts increment a penalty counter on Progress.
-        submitted = (request.form.get("answer") or "").strip().lower()
-        if submitted:
-            try:
-                import json as _json
-                answers = _json.loads(clue_obj.answer_payload or "[]")
-                answers_norm = {str(a).strip().lower() for a in answers if isinstance(a, str)}
-            except Exception:
-                answers_norm = set()
-            if submitted not in answers_norm:
+        # Validate against the single correct answer; options come from answer_payload.
+        submitted = (request.form.get("answer") or "").strip()
+        correct = (clue_obj.answer_correct or "").strip()
+        if not submitted or submitted != correct:
+            # Count wrong attempts only when an option is chosen and is incorrect
+            if submitted:
                 prog.wrong_attempts = (prog.wrong_attempts or 0) + 1
                 db.session.commit()
-                flash("Try again.", "danger")
-                return redirect(url_for("clue", id=clue_obj.id))
+            flash("Try again.", "danger")
+            return redirect(url_for("clue", id=clue_obj.id))
 
     # For tap, correct text, or MCQ with no/valid answer, mark solved
     if not prog.solved_at:
@@ -604,9 +601,11 @@ def admin():
             }
         )
 
+    started_cfg = Config.query.get("GAME_STARTED_AT")
     info = {
         "admin_password_set": bool(admin_password_expected),
         "active_teams": Team.query.count(),
+        "game_started": bool(started_cfg and (started_cfg.value or "").strip()),
         "teams": team_rows,
         "clues": Clue.query.order_by(Clue.order_index.asc(), Clue.id.asc()).all(),
     }
@@ -623,6 +622,10 @@ def admin_reset():
     # Clear Teams and Progress, keep Clues
     Progress.query.delete()
     Team.query.delete()
+    # Clear global game start flag so status shows Not started
+    row = Config.query.get("GAME_STARTED_AT")
+    if row:
+        db.session.delete(row)
     db.session.commit()
     flash("Game reset. All teams and progress cleared.", "warning")
     return redirect(url_for("admin"))
@@ -830,6 +833,7 @@ def setup_add():
             body_variant_b=form.body_variant_b.data,
             answer_type=form.answer_type.data,
             answer_payload=(form.answer_payload.data or "").strip(),
+            answer_correct=((form.answer_correct.data or "").strip() if (form.answer_type.data or "").lower() == "mcq" else None),
             hint_text=form.hint_text.data or "",
             order_index=form.order_index.data,
             is_final=bool(form.is_final.data),
@@ -889,12 +893,16 @@ def setup_edit(id: int):
 
     clue = Clue.query.get_or_404(id)
     form = ClueForm(obj=clue)
+    # Prefill correct answer for MCQ in edit view
+    if request.method == "GET" and (clue.answer_type or "").lower() == "mcq":
+        form.answer_correct.data = clue.answer_correct or ""
     if form.validate_on_submit():
         clue.title = form.title.data
         clue.body_variant_a = form.body_variant_a.data
         clue.body_variant_b = form.body_variant_b.data
         clue.answer_type = form.answer_type.data
         clue.answer_payload = (form.answer_payload.data or "").strip()
+        clue.answer_correct = ((form.answer_correct.data or "").strip() if (form.answer_type.data or "").lower() == "mcq" else None)
         clue.hint_text = form.hint_text.data or ""
         clue.order_index = form.order_index.data
         clue.is_final = bool(form.is_final.data)

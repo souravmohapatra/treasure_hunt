@@ -61,6 +61,7 @@ class Clue(db.Model):
     body_variant_b: Mapped[str] = mapped_column(Text, nullable=False)
     answer_type: Mapped[str] = mapped_column(String(16), nullable=False, default="tap")  # "tap" or "text"
     answer_payload: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    answer_correct: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     hint_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     slug: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True, index=True)
     # Optional image fields
@@ -180,6 +181,8 @@ def init_app_db(app) -> None:
                 db.session.execute(text("ALTER TABLE clues ADD COLUMN image_caption TEXT"))
             if 'slug' not in cols:
                 db.session.execute(text("ALTER TABLE clues ADD COLUMN slug VARCHAR(64)"))
+            if 'answer_correct' not in cols:
+                db.session.execute(text("ALTER TABLE clues ADD COLUMN answer_correct VARCHAR(255)"))
             # Enforce uniqueness at DB level where possible
             db.session.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_clues_slug ON clues(slug)"))
             db.session.commit()
