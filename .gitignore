@@ -5,3 +5,4 @@ __pycache__/
 venv/
 .llm-env/
 data/game.db
+reverse-proxy/certs/
