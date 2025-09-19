@@ -12,7 +12,7 @@
         {% else %}
           <p class="lead mb-1">Enter your team name to join. The game will start when the organizer presses Start.</p>
         {% endif %}
-        <p class="text-muted small">We’ll create your team in the database and use a secure session cookie for this browser.</p>
+        <p class="text-muted small">Enter your team name to join the game.</p>
       </div>
 
       <div class="card shadow-sm">
@@ -36,7 +36,7 @@
                 required
                 autofocus
               >
-              <div class="form-text text-muted">Pick something fun. You can reuse it later in the same browser.</div>
+              <div class="form-text text-muted">Pick a fun team name.</div>
             </div>
             <div class="d-flex align-items-center gap-2">
               <button type="submit" class="btn btn-primary">{% if game_started %}Start{% else %}Join{% endif %}</button>
@@ -47,12 +47,8 @@
       </div>
 
       <div class="mt-4">
-        <p class="text-muted small mb-1">
-          There are {{ total_clues }} clues currently configured.
-          Hints are available with a placeholder delay of {{ GAME_SETTINGS.HINT_DELAY_SECONDS }} seconds.
-        </p>
         <p class="text-muted small mb-0">
-          Scoring and persistence are enabled. Your progress and results are saved.
+          There are {{ total_clues }} clues. Good luck!
         </p>
       </div>
     </div>
