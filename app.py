@@ -257,6 +257,8 @@ def clue(id: int):
             hint_revealed=False,
             clue=clue_obj,
             mcq_options=mcq_options,
+            display_index=clue_obj.order_index,
+            total_clues=Clue.query.count(),
         )
 
     # If this is a tap-style clue with a slug, redirect to the NFC-friendly URL
@@ -316,6 +318,8 @@ def clue(id: int):
         hint_revealed=prog.used_hint,
         clue=clue_obj,
         mcq_options=mcq_options,
+        display_index=clue_obj.order_index,
+        total_clues=Clue.query.count(),
     )
 
 
@@ -352,6 +356,8 @@ def clue_by_slug(slug: str):
             hint_revealed=False,
             clue=clue_obj,
             mcq_options=mcq_options,
+            display_index=clue_obj.order_index,
+            total_clues=Clue.query.count(),
         )
 
     team = get_current_team_record()
@@ -400,6 +406,8 @@ def clue_by_slug(slug: str):
         hint_revealed=prog.used_hint,
         clue=clue_obj,
         mcq_options=mcq_options,
+        display_index=clue_obj.order_index,
+        total_clues=Clue.query.count(),
     )
 
 
@@ -626,6 +634,14 @@ def admin_reset():
     row = Config.query.get("GAME_STARTED_AT")
     if row:
         db.session.delete(row)
+    db.session.commit()
+    # Bump client nonce so browsers reset elapsed timer next page load
+    nonce = uuid.uuid4().hex
+    existing = Config.query.get("CLIENT_NONCE")
+    if existing:
+        existing.value = nonce
+    else:
+        db.session.add(Config(key="CLIENT_NONCE", value=nonce))
     db.session.commit()
     flash("Game reset. All teams and progress cleared.", "warning")
     return redirect(url_for("admin"))
@@ -1075,6 +1091,28 @@ def handle_404(e):
 @app.errorhandler(500)
 def handle_500(e):
     return render_template("500.html"), 500
+
+@app.after_request
+def inject_elapsed_reset_nonce(resp):
+    """
+    Inject a tiny script that resets the client-side elapsed timer when the server-side
+    nonce changes (e.g., after an admin reset). This compares a server-provided nonce
+    to localStorage 'huntNonce' and clears 'huntStartAt' if they differ.
+    """
+    try:
+        ctype = resp.headers.get("Content-Type", "")
+        if "text/html" in ctype.lower():
+            row = Config.query.get("CLIENT_NONCE")
+            nonce = (row.value if row and (row.value or "").strip() else "0")
+            snippet = "(function(){try{var n='%s';var k='huntNonce';var s=localStorage.getItem(k);if(s!==n){localStorage.setItem(k,n);localStorage.removeItem('huntStartAt');}}catch(e){}})();" % nonce
+            body = resp.get_data(as_text=True)
+            if body and "</body>" in body:
+                body = body.replace("</body>", "<script>" + snippet + "</script></body>")
+                resp.set_data(body)
+    except Exception:
+        # Do not block response on any injection errors
+        pass
+    return resp
 
 
 # Allow running with `python app.py` (optional; flask run is preferred)

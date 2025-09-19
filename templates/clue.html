@@ -13,10 +13,10 @@
       <div class="my-3">
         <div class="d-flex justify-content-between align-items-center">
           <div class="flex-grow-1 me-3">
-            <div class="progress" role="progressbar" aria-label="Hunt progress" aria-valuemin="0" aria-valuemax="{{ GAME_SETTINGS.FINAL_CLUE_ID }}" data-current="{{ clue_id }}" data-total="{{ GAME_SETTINGS.FINAL_CLUE_ID }}" id="huntProgress">
+            <div class="progress" role="progressbar" aria-label="Hunt progress" aria-valuemin="0" aria-valuemax="{{ total_clues }}" data-current="{{ display_index }}" data-total="{{ total_clues }}" id="huntProgress">
               <div class="progress-bar" style="width: 0%"></div>
             </div>
-            <div class="small text-muted mt-1">Clue {{ clue_id }} of {{ GAME_SETTINGS.FINAL_CLUE_ID }}</div>
+            <div class="small text-muted mt-1">Clue {{ display_index }} of {{ total_clues }}</div>
           </div>
           <div class="text-nowrap small">
             Elapsed: <span id="elapsedTimer">00:00</span>
@@ -110,9 +110,7 @@
         </div>
       </div>
 
-      <div class="small text-muted">
-        Variant is chosen deterministically from your team token and the clue number.
-      </div>
+
     </div>
   </div>
 {% endblock %}
