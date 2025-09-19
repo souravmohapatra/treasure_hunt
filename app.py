@@ -204,16 +204,30 @@ def start():
         flash("Please enter a team name.", "danger")
         return redirect(url_for("index"))
 
-    # Create new team with unique token (even if name collides, token differentiates)
-    token = uuid.uuid4().hex
-    team = Team(name=team_name, token=token, created_at=datetime.utcnow())
-    db.session.add(team)
-    db.session.commit()
+    # Reuse existing team in this browser session to avoid duplicates
+    team = None
+    sid = session.get("team_id")
+    stok = session.get("team_token")
+    if sid and stok:
+        existing = Team.query.get(sid)
+        if existing and existing.token == stok:
+            # Update name if changed
+            if existing.name != team_name:
+                existing.name = team_name
+                db.session.commit()
+                session["team_name"] = existing.name
+            team = existing
 
-    # Persist identity in session
-    session["team_id"] = team.id
-    session["team_token"] = team.token
-    session["team_name"] = team.name  # for header display
+    # Create a new team only if we don't already have one in this session
+    if team is None:
+        token = uuid.uuid4().hex
+        team = Team(name=team_name, token=token, created_at=datetime.utcnow())
+        db.session.add(team)
+        db.session.commit()
+        # Persist identity in session
+        session["team_id"] = team.id
+        session["team_token"] = team.token
+        session["team_name"] = team.name  # for header display
 
     first = _get_first_clue()
     if not first:
@@ -224,6 +238,7 @@ def start():
     started_cfg = Config.query.get("GAME_STARTED_AT")
     if not (started_cfg and (started_cfg.value or "").strip()):
         flash("Waiting for the game to start. Please standby.", "info")
+        # Auto-start will kick in via client-side polling once admin starts the game
         return redirect(url_for("index"))
 
     return redirect(url_for("clue", id=first.id))
@@ -1076,6 +1091,15 @@ def setup_import():
 def healthz():
     return Response("ok", status=200, mimetype="text/plain")
 
+@app.get("/game_status")
+def game_status():
+    """Lightweight status endpoint for clients waiting on game start."""
+    started_cfg = Config.query.get("GAME_STARTED_AT")
+    started = bool(started_cfg and (started_cfg.value or "").strip())
+    first = _get_first_clue()
+    payload = {"started": started, "first_id": (first.id if first else None)}
+    return Response(json.dumps(payload), status=200, mimetype="application/json")
+
 
 @app.get("/uploads/<path:filename>")
 def serve_upload(filename: str):
@@ -1095,20 +1119,32 @@ def handle_500(e):
 @app.after_request
 def inject_elapsed_reset_nonce(resp):
     """
-    Inject a tiny script that resets the client-side elapsed timer when the server-side
-    nonce changes (e.g., after an admin reset). This compares a server-provided nonce
-    to localStorage 'huntNonce' and clears 'huntStartAt' if they differ.
+    Inject tiny client helpers:
+    - Reset the client-side elapsed timer when admin resets (nonce change).
+    - When on the landing page with a joined team and the game hasn't started,
+      auto-poll the server and redirect to the first clue as soon as the game starts.
     """
     try:
         ctype = resp.headers.get("Content-Type", "")
         if "text/html" in ctype.lower():
-            row = Config.query.get("CLIENT_NONCE")
-            nonce = (row.value if row and (row.value or "").strip() else "0")
-            snippet = "(function(){try{var n='%s';var k='huntNonce';var s=localStorage.getItem(k);if(s!==n){localStorage.setItem(k,n);localStorage.removeItem('huntStartAt');}}catch(e){}})();" % nonce
             body = resp.get_data(as_text=True)
             if body and "</body>" in body:
-                body = body.replace("</body>", "<script>" + snippet + "</script></body>")
-                resp.set_data(body)
+                snippets = []
+
+                # Elapsed timer reset snippet (nonce-based)
+                row = Config.query.get("CLIENT_NONCE")
+                nonce = (row.value if row and (row.value or "").strip() else "0")
+                snippets.append("(function(){try{var n='%s';var k='huntNonce';var s=localStorage.getItem(k);if(s!==n){localStorage.setItem(k,n);localStorage.removeItem('huntStartAt');}}catch(e){}})();" % nonce)
+
+                # Auto-start snippet: only on index while waiting, and only if this browser has a team session
+                started_cfg = Config.query.get("GAME_STARTED_AT")
+                waiting = not (started_cfg and (started_cfg.value or "").strip())
+                if request.endpoint == "index" and waiting and session.get("team_id") and session.get("team_token"):
+                    snippets.append("(function(){var t=setInterval(function(){fetch('/game_status',{headers:{'X-Requested-With':'fetch'}}).then(function(r){return r.ok?r.json():null;}).then(function(j){if(j&&j.started&&j.first_id){clearInterval(t);window.location.href='/clue/'+j.first_id;}}).catch(function(){});},2000);})();")
+
+                if snippets:
+                    body = body.replace("</body>", "<script>" + ";".join(snippets) + "</script></body>")
+                    resp.set_data(body)
     except Exception:
         # Do not block response on any injection errors
         pass
