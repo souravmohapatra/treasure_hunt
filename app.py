@@ -295,8 +295,7 @@ def clue(id: int):
             display_variant = "A"
 
     # If hint was already used, show it again via flash for visibility in current templates
-    if prog.used_hint and clue_obj.hint_text:
-        flash(f"Hint: {clue_obj.hint_text}", "warning")
+    # Hint banner removed; inline hint box only
 
     mcq_options = None
     try:
@@ -380,8 +379,7 @@ def clue_by_slug(slug: str):
         if not body_b and body_a:
             display_variant = "A"
 
-    if prog.used_hint and clue_obj.hint_text:
-        flash(f"Hint: {clue_obj.hint_text}", "warning")
+    # Hint banner removed; inline hint box only
 
     mcq_options = None
     try:
@@ -491,9 +489,8 @@ def hint(id: int = None, slug: str = None):
         db.session.commit()
 
     # Surface the hint via flash so current template shows it
-    if clue_obj.hint_text:
-        flash(f"Hint: {clue_obj.hint_text}", "warning")
-    flash(f"Hint used for Clue {clue_obj.id}", "info")
+    # No hint banner; rely on inline hint box
+    # No banner for "hint used"
     return redirect(url_for("clue", id=clue_obj.id))
 
 

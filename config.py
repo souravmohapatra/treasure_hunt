@@ -26,6 +26,16 @@ os.makedirs(DATA_DIR, exist_ok=True)
 SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(DATA_DIR, "game.db")
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+# CSRF and proxy tolerance:
+# By default, relax strict HTTPS referrer checking (better for LAN reverse-proxy with self-signed certs).
+# Set WTF_CSRF_SSL_STRICT=1 in the environment to enforce strict referer/host checks in production.
+WTF_CSRF_SSL_STRICT = _get_bool("WTF_CSRF_SSL_STRICT", False)
+
+# Optionally set a comma-separated list of trusted origins (host[:port]) if you want strict mode with a proxy.
+_WTF_TRUSTED = os.getenv("WTF_CSRF_TRUSTED_ORIGINS")
+if _WTF_TRUSTED:
+    WTF_CSRF_TRUSTED_ORIGINS = [h.strip() for h in _WTF_TRUSTED.split(",") if h.strip()]
+
 # Game settings exposed to templates (env overrides supported)
 GAME_SETTINGS = {
     "FIRST_CLUE_ID": int(os.getenv("FIRST_CLUE_ID", 1)),

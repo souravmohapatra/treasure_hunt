@@ -223,6 +223,36 @@ Keep HTTP fallback
 - The existing plain HTTP mapping on `18080` remains for debugging or fallback: `http://<LAN_IP>:18080`
 - No database or scoring changes were made for HTTPS.
 
+### CSRF/HTTPS reverse proxy notes & troubleshooting
+
+If you see “Bad Request: The referrer doesn’t match the host” when using https://<LAN_IP>:18443, it’s usually due to CSRF origin checks when running behind a reverse proxy with a different scheme/port.
+
+What’s configured for you by default
+- Proxy headers: The reverse proxy forwards Host (including port), X-Forwarded-Host, X-Forwarded-Proto=https, and X-Forwarded-Port=18443 so Flask/Werkzeug/WTF-CSRF can see the correct external origin.
+- Proxy awareness: The app enables ProxyFix so Flask respects X-Forwarded-* headers.
+- URL scheme: The app sets PREFERRED_URL_SCHEME=https, so generated external URLs prefer https.
+- CSRF strictness: By default, strict HTTPS referrer enforcement is relaxed to work smoothly with LAN self-signed certs. You can enable strict mode via an env var (see below).
+
+Troubleshooting steps
+- Use a single origin consistently:
+  - Always open and submit forms from the same origin you see in the address bar, e.g. https://192.168.1.246:18443
+  - Avoid mixing http://...:18080 and https://...:18443 within the same session.
+- Clear cookies for the site if you switched between http and https recently; mixed sessions can cause CSRF origin mismatches.
+- QR codes and bookmarks should use the exact same host:port you access in the browser (IP vs hostname and port must match).
+- If you prefer strict CSRF checking with a proxy:
+  - Set WTF_CSRF_SSL_STRICT=1
+  - Provide trusted origins (host:port) via WTF_CSRF_TRUSTED_ORIGINS
+  - Example .env:
+    ```
+    LAN_IP=192.168.1.246
+    WTF_CSRF_SSL_STRICT=1
+    WTF_CSRF_TRUSTED_ORIGINS=192.168.1.246:18443,my-lan-host:18443
+    ```
+- Keep HTTP fallback unchanged:
+  - http://<LAN_IP>:18080 remains available for debugging/fallback, but don’t mix it with https during form interactions.
+
+If issues persist, double-check that the proxy is running and listening on 18443, and that you’re visiting the correct https URL with the IP/hostname matching your configured LAN_IP.
+
 ## Polish & Admin Tools
 
 - Dark/Light mode toggle in the navbar; remembered per device (localStorage).
