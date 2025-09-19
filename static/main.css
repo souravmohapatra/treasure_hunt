@@ -201,7 +201,7 @@ footer .small {
 
 /* --- Hero / Gradient --- */
 .hero-wrap {
-    min-height: 100vh;
+    min-height: 100svh;
     position: relative;
 }
 .hero-gradient {
@@ -292,9 +292,13 @@ footer .small {
 
 /* --- Glass card --- */
 .glassy {
-    background: color-mix(in srgb, var(--card) 70%, transparent);
-    backdrop-filter: blur(8px);
+    /* Fallback for older browsers, overridden by color-mix below where supported */
+    background: rgba(255, 255, 255, 0.6);
+    background: color-mix(in srgb, var(--card) 72%, transparent);
+    backdrop-filter: blur(12px) saturate(1.1);
+    -webkit-backdrop-filter: blur(12px) saturate(1.1);
     border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     border-radius: 1rem;
 }
 .hero-title {
@@ -331,4 +335,20 @@ footer .small {
 /* keep anchor target spacing for no-JS fallback */
 #join:target {
     scroll-margin-top: 20vh;
+}
+/* Reduced motion: remove transitions for bottom sheet */
+@media (prefers-reduced-motion: reduce) {
+    .join-sheet {
+        transition: none;
+    }
+}
+/* Ensure hero content layers above animated background */
+.hero-wrap .container {
+    position: relative;
+    z-index: 2;
+}
+/* Magnetic CTA hint: smooth transform */
+.magnetic {
+    will-change: transform;
+    transition: transform 0.2s ease;
 }

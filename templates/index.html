@@ -5,17 +5,14 @@
 {% block content %}
   <section class="hero-wrap position-relative overflow-hidden">
     <div class="hero-gradient"></div>
-    <div class="floating-shapes">
-      <span class="shape s1"></span>
-      <span class="shape s2"></span>
-      <span class="shape s3"></span>
-    </div>
-    <div class="container h-100 d-flex align-items-center justify-content-center">
+    <div id="vanta-bg" class="position-absolute top-0 start-0 w-100 h-100" style="z-index:0;"></div>
+    <div class="container h-100 d-flex align-items-center justify-content-center" style="position:relative; z-index:2;">
       <div class="hero-card text-center pastel-border glassy p-4 p-md-5">
+        <lottie-player src="https://assets9.lottiefiles.com/packages/lf20_jcikwtux.json" background="transparent" speed="1" style="width: 80px; height: 80px; margin: 0 auto 12px;" loop autoplay class="hero-lottie"></lottie-player>
         <h1 class="display-5 fw-bold mb-2 hero-title">Welcome to Beng’s Treasure Hunt</h1>
         <p class="lead muted mb-4">Teams of two. Quick wits. House-powered puzzles.</p>
         <div class="d-flex gap-3 justify-content-center">
-          <a href="#join" class="btn btn-primary btn-lg hero-cta" id="enterHuntBtn" aria-label="Enter the Hunt">
+          <a href="#join" class="btn btn-primary btn-lg hero-cta magnetic" id="enterHuntBtn" aria-label="Enter the Hunt">
             Enter the Hunt
           </a>
         </div>
@@ -48,4 +45,90 @@
       </div>
     </div>
   </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // SplitType + GSAP headline animation
+  try {
+    if (!prefersReduced && window.gsap && window.SplitType) {
+      var split = new SplitType('.hero-title', { types: 'words' });
+      gsap.from(split.words, { opacity: 0, y: 20, stagger: 0.06, duration: 0.7, ease: 'power3.out' });
+    }
+  } catch (e) {}
+
+  // Vanta Waves background init using CSS variables
+  var vanta = null;
+  function getCssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function hexToInt(h){ try { return parseInt(h.replace('#','0x')); } catch(e){ return 0x111111; } }
+  function initVanta(){
+    if (prefersReduced || !window.VANTA || !window.THREE) return;
+    if (vanta && vanta.destroy) { vanta.destroy(); vanta = null; }
+    var el = document.getElementById('vanta-bg');
+    if (!el) return;
+    var primary = hexToInt(getCssVar('--primary') || '#89c2d9');
+    var bg = hexToInt(getCssVar('--bg') || '#f8fafc');
+    vanta = VANTA.WAVES({
+      el: el,
+      THREE: THREE,
+      color: primary,
+      shininess: 20,
+      waveHeight: 12,
+      waveSpeed: 0.75,
+      zoom: 0.95,
+      mouseControls: false,
+      touchControls: false,
+      gyroControls: false,
+      minHeight: 200.00,
+      minWidth: 200.00,
+      backgroundColor: bg
+    });
+  }
+  window.reinitVanta = function(){ initVanta(); };
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initVanta();
+  } else {
+    window.addEventListener('DOMContentLoaded', initVanta);
+  }
+
+  // Re-init on theme toggle
+  var themeBtn = document.getElementById('themeToggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', function(){
+      setTimeout(function(){ if (window.reinitVanta) window.reinitVanta(); }, 50);
+    });
+  }
+
+  // Lottie reduced motion handling
+  try {
+    var lp = document.querySelector('.hero-lottie');
+    if (prefersReduced && lp && typeof lp.pause === 'function') { lp.pause(); }
+  } catch(e){}
+
+  // Magnetic CTA
+  (function(){
+    var btn = document.getElementById('enterHuntBtn');
+    if (!btn) return;
+    var bound = 20;
+    function onMove(e){
+      var rect = btn.getBoundingClientRect();
+      var cx = rect.left + rect.width/2;
+      var cy = rect.top + rect.height/2;
+      var dx = (e.clientX - cx) / rect.width;
+      var dy = (e.clientY - cy) / rect.height;
+      var tx = Math.max(-1, Math.min(1, dx)) * bound;
+      var ty = Math.max(-1, Math.min(1, dy)) * bound;
+      btn.style.transform = 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px)';
+    }
+    function reset(){ btn.style.transform = ''; }
+    btn.addEventListener('mousemove', onMove);
+    btn.addEventListener('mouseleave', reset);
+    btn.addEventListener('touchstart', reset, {passive:true});
+  })();
+})();
+</script>
 {% endblock %}
